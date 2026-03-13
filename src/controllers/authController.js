@@ -1,7 +1,7 @@
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
-import { findUserByEmail, createUser } from "../models/userModel.js";
 import dotenv from "dotenv";
+import { createUser, findUserByEmail } from "../services/userService.js";
 
 dotenv.config();
 
@@ -9,7 +9,7 @@ export const signup = async (req, res) => {
   try {
     const { name, email, password } = req.body;
 
-    const existingUser = findUserByEmail(email);
+    const existingUser = await findUserByEmail(email);
 
     if (existingUser) {
       return res.status(400).json({
@@ -19,8 +19,7 @@ export const signup = async (req, res) => {
 
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    const user = createUser({
-      id: Date.now(),
+    const user = await createUser({
       name,
       email,
       password: hashedPassword,
@@ -34,7 +33,7 @@ export const signup = async (req, res) => {
 
     res.status(201).json({
       message: "Signup successful",
-    //   accessToken,
+      //   accessToken,
       user: {
         id: user.id,
         name: user.name,
@@ -50,7 +49,7 @@ export const login = async (req, res) => {
   try {
     const { email, password } = req.body;
 
-    const user = findUserByEmail(email);
+    const user = await findUserByEmail(email);
 
     if (!user) {
       return res.status(400).json({

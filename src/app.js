@@ -1,6 +1,9 @@
 import express from "express";
 import cors from "cors";
 import authRoutes from "./routes/authRoutes.js";
+import { mongoConnection } from "./connection.js";
+
+mongoConnection();
 
 const app = express();
 

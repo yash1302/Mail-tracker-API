@@ -1,12 +1,14 @@
-let users = [];
 
-export const findUserByEmail = (email) => {
-  return users.find((user) => user.email === email);
-};
 
-export const createUser = (user) => {
-  users.push(user);
-  return user;
-};
+import mongoose from "mongoose";
 
-export const getUsers = () => users;
+const userSchema = new mongoose.Schema({
+  name: { type: String, required: true },
+  email: { type: String, required: true, unique: true },
+  password: { type: String, required: true },
+  createdAt: { type: Date, default: Date.now },
+});
+
+const User = mongoose.model("User", userSchema);
+
+export default User;

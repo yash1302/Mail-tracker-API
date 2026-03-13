@@ -1,0 +1,15 @@
+import mongoose from "mongoose";
+
+export const gmailAccountSchema = new mongoose.Schema({
+  userId: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
+  email: { type: String, required: true },
+  accessToken: { type: String, required: true },
+  refreshToken: { type: String, required: true },
+  tokenExpiry: { type: Date, required: true },
+  createdAt: { type: Date, default: Date.now },
+  isPrimary: { type: Boolean, default: false },
+});
+
+const GmailAccount = mongoose.model("GmailAccount", gmailAccountSchema);
+
+export default GmailAccount;
