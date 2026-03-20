@@ -22,12 +22,3 @@ export const mongoConnection = async () => {
     console.log(error);
   }
 };
-
-const { google } = require("googleapis");
-const credentials = require("./path/to/credentials.json");
-
-const auth = new google.auth.OAuth2(
-  credentials.client_id,
-  credentials.client_secret,
-  "YOUR_REDIRECT_URL",
-);

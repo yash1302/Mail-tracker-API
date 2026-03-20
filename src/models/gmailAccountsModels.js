@@ -1,6 +1,6 @@
 import mongoose from "mongoose";
 
-export const gmailAccountSchema = new mongoose.Schema({
+const gmailAccountSchema = new mongoose.Schema({
   userId: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
   email: { type: String, required: true },
   accessToken: { type: String, required: true },
