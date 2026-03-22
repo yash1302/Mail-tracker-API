@@ -1,6 +1,6 @@
 import { google } from "googleapis";
 import { oauth2Client } from "../config/google.js";
-import GmailAccount from "../models/gmailAccountsModels.js";
+import { insertGmailAccountService } from "../services/gmail.services.js";
 
 export const connectGmail = (req, res) => {
   const url = oauth2Client.generateAuthUrl({
@@ -38,7 +38,7 @@ export const oauthCallback = async (req, res) => {
     const email = profile.data.emailAddress;
 
     // 3. Store in DB
-    await GmailAccount.create({
+    await insertGmailAccountService({
       userId: "69b2958a4c9e262d03c1377e",
       email,
       accessToken: tokens.access_token,

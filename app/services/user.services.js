@@ -1,6 +1,6 @@
 import User from "../models/userModel.js";
 
-export const createUser = async (user) => {
+export const createUserService = async (user) => {
   try {
     const newUser = new User(user);
     await newUser.save();
@@ -11,7 +11,7 @@ export const createUser = async (user) => {
   }
 };
 
-export const findUserByEmail = async (email) => {
+export const findUserByEmailService = async (email) => {
   try {
     const user = await User.findOne({ email });
     return user;
@@ -21,7 +21,7 @@ export const findUserByEmail = async (email) => {
   }
 };
 
-export const getUsers = async () => {
+export const getUsersService = async () => {
   try {
     const users = await User.find();
     return users;

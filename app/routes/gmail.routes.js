@@ -1,5 +1,8 @@
 import express from "express";
-import { connectGmail, oauthCallback } from "../controllers/gmail.controller.js";
+import {
+  connectGmail,
+  oauthCallback,
+} from "../controllers/gmail.controller.js";
 
 const gmailRoutes = express.Router();
 
