@@ -9,6 +9,7 @@ const gmailAccountSchema = new mongoose.Schema({
   createdAt: { type: Date, default: Date.now },
   isPrimary: { type: Boolean, default: false },
 });
+gmailAccountSchema.index({ userId: 1, email: 1 }, { unique: true });
 
 const GmailAccount = mongoose.model("GmailAccount", gmailAccountSchema);
 
