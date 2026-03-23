@@ -2,6 +2,7 @@ import bcrypt from "bcrypt";
 import jsonwebtoken from "jsonwebtoken";
 import dotenv from "dotenv";
 import { v2 as cloudinary } from "cloudinary";
+import { google } from "googleapis";
 
 dotenv.config();
 
@@ -55,10 +56,24 @@ const uploadFromBuffer = (fileBuffer) => {
       (error, result) => {
         if (error) reject(error);
         else resolve(result);
-      }
+      },
     );
     stream.end(fileBuffer);
   });
+};
+
+export const getOAuthClient = (refreshToken) => {
+  const client = new google.auth.OAuth2(
+    process.env.CLIENT_ID,
+    process.env.CLIENT_SECRET,
+    process.env.REDIRECT_URI,
+  );
+
+  client.setCredentials({
+    refresh_token: refreshToken,
+  });
+
+  return client;
 };
 
 export default {

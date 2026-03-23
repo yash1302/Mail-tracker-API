@@ -3,6 +3,7 @@ import mongoose from "mongoose";
 const gmailAccountSchema = new mongoose.Schema({
   userId: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
   email: { type: String, required: true },
+  gmailAccountId: { type: String, required: true },
   accessToken: { type: String, required: true },
   refreshToken: { type: String, required: true },
   tokenExpiry: { type: Date, required: true },

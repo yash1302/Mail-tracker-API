@@ -1,0 +1,24 @@
+import mongoose from "mongoose";
+
+const trackedEmailSchema = new mongoose.Schema({
+  userId: { type: mongoose.Schema.Types.ObjectId, index: true },
+  gmailAccountId: { type: mongoose.Schema.Types.ObjectId, index: true },
+  gmailMessageId: String,
+  gmailThreadId: { type: String, index: true },
+  subject: String,
+  to: [String],
+  cc: [String],
+  bcc: [String],
+  trackingId: { type: String, unique: true },
+  status: {
+    type: String,
+    enum: ["SENT", "FAILED"],
+    default: "SENT",
+  },
+  opensCount: { type: Number, default: 0 },
+  isReplied: { type: Boolean, default: false },
+  sentAt: { type: Date, default: Date.now },
+  lastActivityAt: Date,
+});
+
+export default mongoose.model("TrackedEmail", trackedEmailSchema);

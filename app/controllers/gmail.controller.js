@@ -96,3 +96,12 @@ export const deleteGmailAccountController = async (email, userId) => {
     throw error;
   }
 };
+
+export const sendEmailController = async({ to, subject, body }) => {
+  try {
+    
+  } catch (error) {
+    console.error(error);
+    throw error;
+  }
+}
