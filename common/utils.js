@@ -76,6 +76,37 @@ export const getOAuthClient = (refreshToken) => {
   return client;
 };
 
+export const addTrackingPixel = (html, trackingId) => {
+  const pixel = `<div style="margin-top:10px;">
+  <img 
+    src="${process.env.API_URL}/api/gmail/t/open/${trackingId}" 
+    width="20" 
+    height="20" 
+    style="background-color:red; border:1px solid black;"
+  />
+</div>`;
+  return html + pixel;
+};
+
+export const replaceLinksWithTracking = (html, trackingId) => {
+  return html.replace(/href="(.*?)"/g, (match, url) => {
+    const encoded = encodeURIComponent(url);
+    return `href="${process.env.API_URL}/t/click/${trackingId}?url=${encoded}"`;
+  });
+};
+
+export const stripHtml = (html) => {
+  if (!html) return "";
+  return html
+    .replace(/<[^>]*>/g, "") // Remove HTML tags
+    .replace(/&nbsp;/g, " ") // Replace nbsp with space
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&quot;/g, '"')
+    .replace(/&amp;/g, "&")
+    .trim();
+};
+
 export default {
   hashPassword,
   verifyPassword,

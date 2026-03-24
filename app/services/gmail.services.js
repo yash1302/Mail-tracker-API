@@ -1,4 +1,5 @@
 import GmailAccount from "../models/gmailAccountsModels.js";
+import trackedEmailModel from "../models/trackedEmail.model.js";
 
 export const insertGmailAccountService = async ({
   userId,
@@ -61,3 +62,20 @@ export const deleteGmailAccountService = async (email, userId) => {
     throw error;
   }
 };
+
+export const getGmailAccountByIdService = async (gmailAccountId, userId) => {
+  return GmailAccount.findOne({
+    _id: gmailAccountId,
+    userId,
+  });
+};
+
+export const createTrackedEmailService = async (data) => {
+  try {
+    return await trackedEmailModel.create(data);
+  } catch (error) {
+    console.error(error);
+    throw error;
+  }
+};
+

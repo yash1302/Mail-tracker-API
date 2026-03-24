@@ -8,7 +8,8 @@
     "googleapis": "^171.4.0",
     "http-server": "^14.1.1",
     "jsonwebtoken": "^9.0.3",
-    "mongoose": "^9.3.0"
+    "mongoose": "^9.3.0",
+    "uuid": "^13.0.0"
   },
   "name": "mail-tracker-api",
   "version": "1.0.0",
