@@ -77,21 +77,21 @@ export const getOAuthClient = (refreshToken) => {
 };
 
 export const addTrackingPixel = (html, trackingId) => {
-  const pixel = `<div style="margin-top:10px;">
-  <img 
-    src="${process.env.API_URL}/api/gmail/t/open/${trackingId}" 
-    width="20" 
-    height="20" 
-    style="background-color:red; border:1px solid black;"
-  />
-</div>`;
+  console.log("PIXEL URL:", `${process.env.API_URL}/api/gmail/t/open/${trackingId}`);
+  const pixel = ` <img 
+      src="${process.env.API_URL}/api/gmail/t/open/${trackingId}?r=${Math.random()}" 
+      width="1" 
+      height="1" 
+      style="display:none; opacity:0;" 
+      alt=""
+    />`;
   return html + pixel;
 };
 
 export const replaceLinksWithTracking = (html, trackingId) => {
   return html.replace(/href="(.*?)"/g, (match, url) => {
     const encoded = encodeURIComponent(url);
-    return `href="${process.env.API_URL}/t/click/${trackingId}?url=${encoded}"`;
+    return `href="${process.env.API_URL}/api/gmail/t/click/${trackingId}?url=${encoded}"`;
   });
 };
 

@@ -16,6 +16,7 @@ const {
   GMAIL_ACCOUNT,
   SEND_EMAIL,
   OPEN_EMAIL_TRACKING,
+  CLICK_LINK_TRACKING,
 } = gmailRoutesConstants;
 
 const gmailRoutes = express.Router();
@@ -61,11 +62,18 @@ gmailRoutes.post(SEND_EMAIL, async (req, res, next) => {
   }
 });
 
-gmailRoutes.get(OPEN_EMAIL_TRACKING, async (req, res, next) => {
+gmailRoutes.get(CLICK_LINK_TRACKING, async (req, res, next) => {
   try {
     const { trackingId } = req.params;
+    const { ts } = req.query;
 
-    console.log("Email Opened:", trackingId);
+    console.log("Link Clicked:", trackingId);
+    console.log("📩 Link Clicked:", {
+      trackingId,
+      ts,
+      userAgent: req.headers["user-agent"],
+      ip: req.ip,
+    });
 
     // TODO: update DB here (opensCount++)
 

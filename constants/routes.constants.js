@@ -14,4 +14,5 @@ export const gmailRoutesConstants = {
   GMAIL_ACCOUNT: "/accounts",
   SEND_EMAIL: "/send",
   OPEN_EMAIL_TRACKING : "/t/open/:trackingId",
+  CLICK_LINK_TRACKING : "/t/click/:trackingId",
 };

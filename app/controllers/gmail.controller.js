@@ -129,7 +129,7 @@ export const sendEmailController = async (
 
     // 🔹 3. Inject tracking (uncomment when ready)
     let finalHtml = addTrackingPixel(html, trackingId);
-    // finalHtml = replaceLinksWithTracking(finalHtml, trackingId);
+    finalHtml = replaceLinksWithTracking(finalHtml, trackingId);
 
     // 🔹 4. Create OAuth client
     const auth = getOAuthClient(account.refreshToken);
