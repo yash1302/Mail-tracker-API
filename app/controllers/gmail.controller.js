@@ -115,23 +115,14 @@ export const sendEmailController = async (
   html,
   gmailAccountId,
   userId,
+  attachmentIds = [],
+  files = [],
 ) => {
   try {
-    // 🔹 1. Get Gmail account (DB)
     const account = await getGmailAccountByIdService(gmailAccountId, userId);
 
-    if (!account) {
-      throw new Error(GMAILACCOUNTNOTFOUND);
-    }
+    if (!account) throw new Error(GMAILACCOUNTNOTFOUND);
 
-    // 🔹 2. Generate trackingId
-    const trackingId = uuidv4();
-
-    // 🔹 3. Inject tracking (uncomment when ready)
-    let finalHtml = addTrackingPixel(html, trackingId);
-    finalHtml = replaceLinksWithTracking(finalHtml, trackingId);
-
-    // 🔹 4. Create OAuth client
     const auth = getOAuthClient(account.refreshToken);
 
     const gmail = google.gmail({
@@ -139,64 +130,142 @@ export const sendEmailController = async (
       auth,
     });
 
-    // 🔹 5. Build message with proper RFC 5322 format
-    const boundary = `boundary_${Date.now()}`;
+    let storedAttachments = [];
+    if (attachmentIds.length) {
+      storedAttachments = await getAttachmentsByIdsService(attachmentIds);
+    }
 
-    const headers = [
-      `To: ${to.join(", ")}`,
-      cc?.length > 0 ? `Cc: ${cc.join(", ")}` : null,
-      bcc?.length > 0 ? `Bcc: ${bcc.join(", ")}` : null,
-      `Subject: ${subject}`,
-      `From: ${account.email}`,
-      `Date: ${new Date().toUTCString()}`,
-      "MIME-Version: 1.0",
-      `Content-Type: multipart/alternative; boundary="${boundary}"`,
-    ].filter(Boolean);
+    const batch_size = 5;
+    const results = [];
 
-    const textPart = `--${boundary}\r\nContent-Type: text/plain; charset="UTF-8"\r\nContent-Transfer-Encoding: 7bit\r\n\r\n${stripHtml(finalHtml)}\r\n`;
+    const processedFiles = files.map((file) => ({
+      filename: file.originalname,
+      mimeType: file.mimetype,
+      base64: file.buffer.toString("base64"),
+    }));
 
-    const htmlPart = `--${boundary}\r\nContent-Type: text/html; charset="UTF-8"\r\nContent-Transfer-Encoding: 7bit\r\n\r\n${finalHtml}\r\n`;
+    for (let i = 0; i < to.length; i += batch_size) {
+      const batch = to.slice(i, i + batch_size);
 
-    const closingBoundary = `--${boundary}--`;
+      const batchPromises = batch.map(async (recipient) => {
+        try {
+          const trackingId = uuidv4();
 
-    const message = [
-      headers.join("\r\n"),
-      "\r\n",
-      textPart,
-      htmlPart,
-      closingBoundary,
-    ].join("\r\n");
+          let finalHtml = addTrackingPixel(html, trackingId);
+          finalHtml = replaceLinksWithTracking(finalHtml, trackingId);
 
-    // Encode to base64url
-    const encodedMessage = Buffer.from(message)
-      .toString("base64")
-      .replace(/\+/g, "-")
-      .replace(/\//g, "_")
-      .replace(/=+$/, "");
+          const outerBoundary = `mixed_${Date.now()}_${Math.random()}`;
+          const innerBoundary = `alt_${Date.now()}_${Math.random()}`;
 
-    // 🔹 6. Send email
-    const response = await gmail.users.messages.send({
-      userId: "me",
-      requestBody: { raw: encodedMessage },
-    });
+          const headers = [
+            `To: ${recipient}`,
+            cc?.length ? `Cc: ${cc.join(", ")}` : null,
+            bcc?.length ? `Bcc: ${bcc.join(", ")}` : null,
+            `Subject: ${subject}`,
+            `From: ${account.email}`,
+            `Date: ${new Date().toUTCString()}`,
+            "MIME-Version: 1.0",
+            `Content-Type: multipart/mixed; boundary="${outerBoundary}"`,
+          ].filter(Boolean);
 
-    // 🔹 7. Save in DB (SERVICE)
-    const email = await createTrackedEmailService({
-      userId,
-      gmailAccountId,
-      gmailMessageId: response.data.id,
-      gmailThreadId: response.data.threadId,
-      subject,
-      to,
-      cc,
-      bcc,
-      trackingId,
-      bodyPreview: finalHtml.slice(0, 200),
-    });
+          const alternativePart = [
+            `--${outerBoundary}`,
+            `Content-Type: multipart/alternative; boundary="${innerBoundary}"`,
+            "",
+            `--${innerBoundary}`,
+            `Content-Type: text/plain; charset="UTF-8"`,
+            "",
+            stripHtml(finalHtml),
+            "",
+            `--${innerBoundary}`,
+            `Content-Type: text/html; charset="UTF-8"`,
+            "",
+            finalHtml,
+            "",
+            `--${innerBoundary}--`,
+            "",
+          ].join("\r\n");
+
+          const attachmentParts = [];
+
+          // for (const file of storedAttachments) {
+          //   const fileBuffer = await downloadFileFromUrl(file.fileUrl);
+
+          //   attachmentParts.push(
+          //     [
+          //       `--${outerBoundary}`,
+          //       `Content-Type: ${file.mimeType}; name="${file.filename}"`,
+          //       "Content-Transfer-Encoding: base64",
+          //       `Content-Disposition: attachment; filename="${file.filename}"`,
+          //       "",
+          //       fileBuffer.toString("base64"),
+          //       "",
+          //     ].join("\r\n"),
+          //   );
+          // }
+
+          for (const file of processedFiles) {
+            attachmentParts.push(
+              [
+                `--${outerBoundary}`,
+                `Content-Type: ${file.mimeType}; name="${file.filename}"`,
+                "Content-Transfer-Encoding: base64",
+                `Content-Disposition: attachment; filename="${file.filename}"`,
+                "",
+                file.base64,
+                "",
+              ].join("\r\n"),
+            );
+          }
+
+          const message = [
+            headers.join("\r\n"),
+            "",
+            alternativePart,
+            ...attachmentParts,
+            `--${outerBoundary}--`,
+          ].join("\r\n");
+
+          const encodedMessage = Buffer.from(message)
+            .toString("base64")
+            .replace(/\+/g, "-")
+            .replace(/\//g, "_")
+            .replace(/=+$/, "");
+
+          const response = await gmail.users.messages.send({
+            userId: "me",
+            requestBody: { raw: encodedMessage },
+          });
+
+          const email = await createTrackedEmailService({
+            userId,
+            gmailAccountId,
+            gmailMessageId: response.data.id,
+            gmailThreadId: response.data.threadId,
+            subject,
+            to: [recipient],
+            cc,
+            bcc,
+            trackingId,
+            bodyPreview: finalHtml.slice(0, 200),
+          });
+
+          return { success: true, data: email };
+        } catch (error) {
+          return { success: false, error: error.message };
+        }
+      });
+
+      const batchResults = await Promise.all(batchPromises);
+      results.push(...batchResults);
+
+      await new Promise((res) => setTimeout(res, 1000));
+    }
 
     return {
       success: true,
-      data: email,
+      total: to.length,
+      results,
     };
   } catch (error) {
     console.error("Send Email Error:", error);

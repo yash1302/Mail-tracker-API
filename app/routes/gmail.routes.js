@@ -9,6 +9,7 @@ import {
 } from "../controllers/gmail.controller.js";
 import { gmailRoutesConstants } from "../../constants/routes.constants.js";
 import { responseHandler } from "../../common/messageHandlers.js";
+import upload from "../middleware/multer.js";
 
 const {
   CONNECT,
@@ -44,17 +45,29 @@ gmailRoutes.delete(GMAIL_ACCOUNT, async (req, res, next) => {
   }
 });
 
-gmailRoutes.post(SEND_EMAIL, async (req, res, next) => {
+gmailRoutes.post(SEND_EMAIL, upload.array("files"), async (req, res, next) => {
   try {
-    const { to, cc, bcc, subject, html, gmailAccountId, userId } = req?.body;
-    const result = await sendEmailController(
+    const {
       to,
       cc,
       bcc,
       subject,
-      html,
+      body,
       gmailAccountId,
       userId,
+      attachmentIds = [],
+    } = req?.body;
+    const files = req?.files || [];
+    const result = await sendEmailController(
+      JSON.parse(to),
+      JSON.parse(cc),
+      JSON.parse(bcc),
+      subject,
+      body,
+      gmailAccountId,
+      userId,
+      JSON.parse(attachmentIds),
+      files,
     );
     res.status(200).json(new responseHandler(result));
   } catch (error) {
