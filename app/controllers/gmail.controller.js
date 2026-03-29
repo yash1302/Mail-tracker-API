@@ -6,6 +6,7 @@ import {
   getGmailAccountByEmailAndUserIdService,
   getGmailAccountByIdService,
   getGmailAccountsService,
+  getTrackedEmailsService,
   insertGmailAccountService,
 } from "../services/gmail.services.js";
 import utils, {
@@ -247,7 +248,7 @@ export const sendEmailController = async (
             cc,
             bcc,
             trackingId,
-            bodyPreview: finalHtml.slice(0, 200),
+            bodyPreview: stripHtml(finalHtml).slice(0, 200),
           });
 
           return { success: true, data: email };
@@ -300,6 +301,30 @@ export const checkEmailReadStatus = async (
     return isRead;
   } catch (error) {
     console.error("Error checking read status:", error);
+    throw error;
+  }
+};
+
+export const getEmailsController = async (userId, gmailAccountId) => {
+  try {
+    const emails = await getTrackedEmailsService({
+      userId,
+      gmailAccountId,
+    });
+
+    return emails.map((email) => ({
+      id: email.id,
+      subject: email.subject,
+      to: email.to,
+      cc: email.cc,
+      bcc: email.bcc,
+      preview: email.bodyPreview,
+      trackingId: email.trackingId,
+      sentAt: email.sentAt,
+      status: email.status || "sent",
+    }));
+  } catch (error) {
+    console.error("Error fetching emails:", error);
     throw error;
   }
 };

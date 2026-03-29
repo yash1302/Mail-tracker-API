@@ -3,6 +3,7 @@ import {
   checkEmailReadStatus,
   connectGmail,
   deleteGmailAccountController,
+  getEmailsController,
   getGmailAccountsController,
   oauthCallback,
   sendEmailController,
@@ -18,6 +19,7 @@ const {
   SEND_EMAIL,
   OPEN_EMAIL_TRACKING,
   CLICK_LINK_TRACKING,
+  GET_EMAILS,
 } = gmailRoutesConstants;
 
 const gmailRoutes = express.Router();
@@ -113,6 +115,16 @@ gmailRoutes.get("/test", async (req, res, next) => {
       "19d1ec82908445e8",
     );
     res.status(200).json(new responseHandler("Test route working"));
+  } catch (error) {
+    next(error);
+  }
+});
+
+gmailRoutes.get(GET_EMAILS, async (req, res, next) => {
+  try {
+    const { gmailAccountId, userId } = req.query;
+    const emails = await getEmailsController(userId, gmailAccountId);
+    res.status(200).json(new responseHandler(emails));
   } catch (error) {
     next(error);
   }

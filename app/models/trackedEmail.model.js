@@ -19,6 +19,7 @@ const trackedEmailSchema = new mongoose.Schema({
   isReplied: { type: Boolean, default: false },
   sentAt: { type: Date, default: Date.now },
   lastActivityAt: Date,
+  bodyPreview: String,
 });
 
 export default mongoose.model("TrackedEmail", trackedEmailSchema);

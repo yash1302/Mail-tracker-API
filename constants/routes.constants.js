@@ -13,6 +13,7 @@ export const gmailRoutesConstants = {
   OAUTH2CALLBACK: "/oauth/callback",
   GMAIL_ACCOUNT: "/accounts",
   SEND_EMAIL: "/send",
-  OPEN_EMAIL_TRACKING : "/t/open/:trackingId",
-  CLICK_LINK_TRACKING : "/t/click/:trackingId",
+  OPEN_EMAIL_TRACKING: "/t/open/:trackingId",
+  CLICK_LINK_TRACKING: "/t/click/:trackingId",
+  GET_EMAILS: "/",
 };

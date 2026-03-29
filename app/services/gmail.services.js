@@ -79,3 +79,13 @@ export const createTrackedEmailService = async (data) => {
   }
 };
 
+export const getTrackedEmailsService = async ({ userId, gmailAccountId }) => {
+  try {
+    return trackedEmailModel
+      .find({ userId, gmailAccountId })
+      .sort({ sentAt: -1 });
+  } catch (error) {
+    console.error(error);
+    throw error;
+  }
+};
