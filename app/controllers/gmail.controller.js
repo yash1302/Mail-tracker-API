@@ -3,16 +3,20 @@ import { oauth2Client } from "../config/google.js";
 import {
   createTrackedEmailService,
   deleteGmailAccountService,
+  getClickStatsService,
   getGmailAccountByEmailAndUserIdService,
   getGmailAccountByIdService,
   getGmailAccountsService,
   getTrackedEmailsService,
+  incrementClickCountService,
   insertGmailAccountService,
 } from "../services/gmail.services.js";
 import utils, {
   addTrackingPixel,
   getOAuthClient,
+  linkifyIfNeeded,
   replaceLinksWithTracking,
+  sanitizeEmailHtml,
   stripHtml,
 } from "../../common/utils.js";
 import { gmailMessages } from "../messages/gmail.messages.js";
@@ -152,8 +156,15 @@ export const sendEmailController = async (
         try {
           const trackingId = uuidv4();
 
-          let finalHtml = addTrackingPixel(html, trackingId);
+          let finalHtml = html;
+
+          finalHtml = sanitizeEmailHtml(finalHtml);
+
+          finalHtml = linkifyIfNeeded(finalHtml);
+
           finalHtml = replaceLinksWithTracking(finalHtml, trackingId);
+
+          finalHtml = addTrackingPixel(finalHtml, trackingId);
 
           const outerBoundary = `mixed_${Date.now()}_${Math.random()}`;
           const innerBoundary = `alt_${Date.now()}_${Math.random()}`;
@@ -238,7 +249,7 @@ export const sendEmailController = async (
             requestBody: { raw: encodedMessage },
           });
 
-          const email = await createTrackedEmailService({
+          const emailData = {
             userId,
             gmailAccountId,
             gmailMessageId: response.data.id,
@@ -249,7 +260,19 @@ export const sendEmailController = async (
             bcc,
             trackingId,
             bodyPreview: stripHtml(finalHtml).slice(0, 200),
-          });
+            htmlBody: finalHtml,
+            textBody: stripHtml(finalHtml),
+          };
+
+          if (processedFiles.length > 0) {
+            emailData.attachmentsMeta = processedFiles.map((file) => ({
+              filename: file.filename,
+              mimeType: file.mimeType,
+              size: file.base64.length,
+            }));
+          }
+
+          const email = await createTrackedEmailService(emailData);
 
           return { success: true, data: email };
         } catch (error) {
@@ -274,34 +297,38 @@ export const sendEmailController = async (
   }
 };
 
-export const checkEmailReadStatus = async (
-  gmailAccountId,
-  userId,
-  gmailMessageId,
-) => {
+export const trackClickController = async (req, res, next) => {
   try {
-    const account = await getGmailAccountByIdService(gmailAccountId, userId);
+    const { trackingId } = req.params;
+    const { url } = req.query;
 
-    if (!account) {
-      throw new Error(GMAILACCOUNTNOTFOUND);
+    if (!trackingId || !url) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid tracking link",
+      });
     }
 
-    // 🔹 4. Create OAuth client
-    const auth = getOAuthClient(account.refreshToken);
+    const decodedUrl = decodeURIComponent(url);
 
-    const gmail = google.gmail({ version: "v1", auth });
+    const userAgent = req.headers["user-agent"];
+    const ip = req.ip;
 
-    const message = await gmail.users.messages.get({
-      userId: "me",
-      id: gmailMessageId,
+    console.log("📩 Click Tracked:", {
+      trackingId,
+      decodedUrl,
+      userAgent,
+      ip,
     });
 
-    // If UNREAD label is gone, email was opened
-    const isRead = !message.data.labelIds?.includes("UNREAD");
-    return isRead;
+    const isBot = /bot|crawler|spider|crawling/i.test(userAgent);
+    if (!isBot) {
+      await incrementClickCountService(trackingId);
+    }
+
+    return res.redirect(decodedUrl);
   } catch (error) {
-    console.error("Error checking read status:", error);
-    throw error;
+    next(error);
   }
 };
 
@@ -322,9 +349,20 @@ export const getEmailsController = async (userId, gmailAccountId) => {
       trackingId: email.trackingId,
       sentAt: email.sentAt,
       status: email.status || "sent",
+      attachmentsMeta: email.attachmentsMeta || [],
     }));
   } catch (error) {
     console.error("Error fetching emails:", error);
     throw error;
+  }
+};
+
+export const getClickStatsController = async (trackingId) => {
+  try {
+    const data = await getClickStatsService(trackingId);
+
+    return data;
+  } catch (error) {
+    next(error);
   }
 };

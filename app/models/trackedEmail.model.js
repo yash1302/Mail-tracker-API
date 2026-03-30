@@ -16,10 +16,21 @@ const trackedEmailSchema = new mongoose.Schema({
     default: "SENT",
   },
   opensCount: { type: Number, default: 0 },
+  clicksCount: { type: Number, default: 0 },
+  lastClickedAt: Date,
   isReplied: { type: Boolean, default: false },
   sentAt: { type: Date, default: Date.now },
   lastActivityAt: Date,
   bodyPreview: String,
+  htmlBody: String, 
+  textBody: String, 
+  attachmentsMeta: [
+    {
+      filename: String,
+      mimeType: String,
+      size: Number,
+    },
+  ],
 });
 
 export default mongoose.model("TrackedEmail", trackedEmailSchema);

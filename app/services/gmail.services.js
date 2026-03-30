@@ -89,3 +89,35 @@ export const getTrackedEmailsService = async ({ userId, gmailAccountId }) => {
     throw error;
   }
 };
+
+export const incrementClickCountService = async (trackingId) => {
+  return trackedEmailModel.findOneAndReplace(
+    { trackingId },
+    {
+      $inc: { clicksCount: 1 },
+      $set: { lastActivityAt: new Date(), lastClickedAt: new Date() },
+    },
+    { new: true },
+  );
+};
+
+export const getClickStatsService = async (trackingId) => {
+  try {
+    const email = await trackedEmailModel.findOne({ trackingId });
+
+    if (!email) {
+      throw new Error("Tracking ID not found");
+    }
+
+    return {
+      trackingId: email.trackingId,
+      clicksCount: email.clicksCount || 0,
+      opensCount: email.opensCount || 0,
+      lastClickedAt: email.lastClickedAt || null,
+      lastActivityAt: email.lastActivityAt || null,
+    };
+  } catch (error) {
+    console.error(error);
+    throw error;
+  }
+};

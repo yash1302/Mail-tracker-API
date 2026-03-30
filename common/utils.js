@@ -3,6 +3,7 @@ import jsonwebtoken from "jsonwebtoken";
 import dotenv from "dotenv";
 import { v2 as cloudinary } from "cloudinary";
 import { google } from "googleapis";
+import sanitizeHtml from "sanitize-html";
 
 dotenv.config();
 
@@ -77,7 +78,10 @@ export const getOAuthClient = (refreshToken) => {
 };
 
 export const addTrackingPixel = (html, trackingId) => {
-  console.log("PIXEL URL:", `${process.env.API_URL}/api/gmail/t/open/${trackingId}`);
+  console.log(
+    "PIXEL URL:",
+    `${process.env.API_URL}/api/gmail/t/open/${trackingId}`,
+  );
   const pixel = ` <img 
       src="${process.env.API_URL}/api/gmail/t/open/${trackingId}?r=${Math.random()}" 
       width="1" 
@@ -89,9 +93,29 @@ export const addTrackingPixel = (html, trackingId) => {
 };
 
 export const replaceLinksWithTracking = (html, trackingId) => {
-  return html.replace(/href="(.*?)"/g, (match, url) => {
+  if (!html) return html;
+
+  return html.replace(/href=["'](.*?)["']/gi, (match, url) => {
+    // 🔹 Skip invalid / non-trackable links
+    if (
+      !url ||
+      url.startsWith("#") ||
+      url.startsWith("mailto:") ||
+      url.startsWith("tel:")
+    ) {
+      return match;
+    }
+
+    // 🔹 Prevent double tracking
+    if (url.includes("/t/click/")) {
+      return match;
+    }
+
     const encoded = encodeURIComponent(url);
-    return `href="${process.env.API_URL}/api/gmail/t/click/${trackingId}?url=${encoded}"`;
+
+    const trackedUrl = `${process.env.API_URL}/api/gmail/t/click/${trackingId}?url=${encoded}`;
+
+    return `href="${trackedUrl}" target="_blank" rel="noopener noreferrer"`;
   });
 };
 
@@ -105,6 +129,46 @@ export const stripHtml = (html) => {
     .replace(/&quot;/g, '"')
     .replace(/&amp;/g, "&")
     .trim();
+};
+
+export const sanitizeEmailHtml = (html) => {
+  return sanitizeHtml(html, {
+    allowedTags: [
+      "p",
+      "br",
+      "b",
+      "i",
+      "strong",
+      "em",
+      "a",
+      "ul",
+      "ol",
+      "li",
+      "div",
+      "span",
+    ],
+    allowedAttributes: {
+      a: ["href", "target", "rel"],
+      "*": ["style"],
+    },
+    allowedSchemes: ["http", "https", "mailto"],
+  });
+};
+
+/**
+ * 🔹 Linkify ONLY if no <a> tags exist
+ */
+export const linkifyIfNeeded = (html) => {
+  if (!html) return html;
+
+  // already has links → skip
+  if (/<a\s+href=/i.test(html)) return html;
+
+  const urlRegex = /(https?:\/\/[^\s<]+)/g;
+
+  return html.replace(urlRegex, (url) => {
+    return `<a href="${url}">${url}</a>`;
+  });
 };
 
 export default {

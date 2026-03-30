@@ -1,12 +1,13 @@
 import express from "express";
 import {
-  checkEmailReadStatus,
   connectGmail,
   deleteGmailAccountController,
+  getClickStatsController,
   getEmailsController,
   getGmailAccountsController,
   oauthCallback,
   sendEmailController,
+  trackClickController,
 } from "../controllers/gmail.controller.js";
 import { gmailRoutesConstants } from "../../constants/routes.constants.js";
 import { responseHandler } from "../../common/messageHandlers.js";
@@ -20,6 +21,7 @@ const {
   OPEN_EMAIL_TRACKING,
   CLICK_LINK_TRACKING,
   GET_EMAILS,
+  GET_CLICK_STATS,
 } = gmailRoutesConstants;
 
 const gmailRoutes = express.Router();
@@ -77,54 +79,23 @@ gmailRoutes.post(SEND_EMAIL, upload.array("files"), async (req, res, next) => {
   }
 });
 
-gmailRoutes.get(CLICK_LINK_TRACKING, async (req, res, next) => {
-  try {
-    const { trackingId } = req.params;
-    const { ts } = req.query;
-
-    console.log("Link Clicked:", trackingId);
-    console.log("📩 Link Clicked:", {
-      trackingId,
-      ts,
-      userAgent: req.headers["user-agent"],
-      ip: req.ip,
-    });
-
-    // TODO: update DB here (opensCount++)
-
-    // ✅ return transparent pixel
-    const img = Buffer.from(
-      "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR4nGNgYAAAAAMAASsJTYQAAAAASUVORK5CYII=",
-      "base64",
-    );
-
-    res.set("Content-Type", "image/png");
-    res.set("Content-Length", img.length);
-
-    res.status(200).end(img);
-  } catch (error) {
-    next(error);
-  }
-});
-
-gmailRoutes.get("/test", async (req, res, next) => {
-  try {
-    checkEmailReadStatus(
-      "69c2166bb29ad119060305e1",
-      "69be282f308e28bd2f3c6997",
-      "19d1ec82908445e8",
-    );
-    res.status(200).json(new responseHandler("Test route working"));
-  } catch (error) {
-    next(error);
-  }
-});
+gmailRoutes.get(CLICK_LINK_TRACKING, trackClickController);
 
 gmailRoutes.get(GET_EMAILS, async (req, res, next) => {
   try {
     const { gmailAccountId, userId } = req.query;
     const emails = await getEmailsController(userId, gmailAccountId);
     res.status(200).json(new responseHandler(emails));
+  } catch (error) {
+    next(error);
+  }
+});
+
+gmailRoutes.get(GET_CLICK_STATS, async (req, res, next) => {
+  try {
+    const { trackingId } = req.params;
+    const stats = await getClickStatsController(trackingId);
+    res.status(200).json(new responseHandler(stats));
   } catch (error) {
     next(error);
   }
