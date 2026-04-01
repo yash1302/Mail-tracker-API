@@ -2,6 +2,7 @@ import express from "express";
 import {
   connectGmail,
   deleteGmailAccountController,
+  downloadAttachmentController,
   getClickStatsController,
   getEmailsController,
   getGmailAccountsController,
@@ -22,6 +23,7 @@ const {
   CLICK_LINK_TRACKING,
   GET_EMAILS,
   GET_CLICK_STATS,
+  DOWNLOAD_ATTACHMENT,
 } = gmailRoutesConstants;
 
 const gmailRoutes = express.Router();
@@ -100,5 +102,7 @@ gmailRoutes.get(GET_CLICK_STATS, async (req, res, next) => {
     next(error);
   }
 });
+
+gmailRoutes.get(DOWNLOAD_ATTACHMENT, downloadAttachmentController);
 
 export default gmailRoutes;

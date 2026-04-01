@@ -50,19 +50,6 @@ const imageUpload = async (dataURI) => {
   }
 };
 
-const uploadFromBuffer = (fileBuffer) => {
-  return new Promise((resolve, reject) => {
-    const stream = cloudinary.uploader.upload_stream(
-      { folder: "my_app" },
-      (error, result) => {
-        if (error) reject(error);
-        else resolve(result);
-      },
-    );
-    stream.end(fileBuffer);
-  });
-};
-
 export const getOAuthClient = (refreshToken) => {
   const client = new google.auth.OAuth2(
     process.env.CLIENT_ID,
@@ -155,9 +142,6 @@ export const sanitizeEmailHtml = (html) => {
   });
 };
 
-/**
- * 🔹 Linkify ONLY if no <a> tags exist
- */
 export const linkifyIfNeeded = (html) => {
   if (!html) return html;
 
@@ -171,11 +155,41 @@ export const linkifyIfNeeded = (html) => {
   });
 };
 
+const uploadFilesToCloudinary = async (files = []) => {
+  if (!files.length) return [];
+
+  return await Promise.all(
+    files.map((file) => {
+      return new Promise((resolve, reject) => {
+        const stream = cloudinary.uploader.upload_stream(
+          {
+            folder: "email_drafts",
+            resource_type: "auto",
+          },
+          (error, result) => {
+            if (error) return reject(error);
+
+            resolve({
+              filename: file.originalname,
+              mimeType: file.mimetype,
+              size: file.size,
+              url: result.secure_url,
+              public_id: result.public_id,
+            });
+          },
+        );
+
+        stream.end(file.buffer);
+      });
+    }),
+  );
+};
+
 export default {
   hashPassword,
   verifyPassword,
   generateJwtToken,
   verifyToken,
   imageUpload,
-  uploadFromBuffer,
+  uploadFilesToCloudinary,
 };

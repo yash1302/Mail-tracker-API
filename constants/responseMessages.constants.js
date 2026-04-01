@@ -24,6 +24,7 @@ export const successMessages = {
     `${resource} updated successfully.`,
   resourceCanceledSuccessfully: (resource) =>
     `${resource} canceled successfully.`,
+  resourceDeletedSucessfully: (resource) => `${resource} deleted successfully.`,
   createdMessage: "Resource created successfully.",
   updatedMessage: "Resource updated successfully.",
   deletedMessage: "Resource deleted successfully.",

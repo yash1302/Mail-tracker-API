@@ -4,7 +4,8 @@ import authRoutes from "./routes/auth.routes.js";
 import { mongoConnection } from "./connection.js";
 import gmailRoutes from "./routes/gmail.routes.js";
 import { routesConstants } from "../constants/routes.constants.js";
-const { AUTH, GMAIL } = routesConstants;
+import draftRoutes from "./routes/draft.routes.js";
+const { AUTH, GMAIL, DRAFT } = routesConstants;
 
 mongoConnection();
 
@@ -23,6 +24,7 @@ app.get("/api/test", (req, res) => {
 const routes = [
   { path: AUTH, route: authRoutes },
   { path: GMAIL, route: gmailRoutes },
+  { path: DRAFT, route: draftRoutes },
 ];
 
 routes.forEach(({ path, route }) => {

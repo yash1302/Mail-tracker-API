@@ -350,6 +350,7 @@ export const getEmailsController = async (userId, gmailAccountId) => {
       sentAt: email.sentAt,
       status: email.status || "sent",
       attachmentsMeta: email.attachmentsMeta || [],
+      messageId: email.gmailMessageId,
     }));
   } catch (error) {
     console.error("Error fetching emails:", error);
@@ -362,6 +363,73 @@ export const getClickStatsController = async (trackingId) => {
     const data = await getClickStatsService(trackingId);
 
     return data;
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const downloadAttachmentController = async (req, res, next) => {
+  try {
+    const { messageId, filename } = req.params;
+    const { gmailAccountId, userId } = req.query;
+
+    const account = await getGmailAccountByIdService(gmailAccountId, userId);
+
+    if (!account) {
+      return res.status(404).json({ message: "Gmail account not found" });
+    }
+
+    const auth = getOAuthClient(account.refreshToken);
+
+    const gmail = google.gmail({ version: "v1", auth });
+
+    // 🔹 1. Get full message
+    const message = await gmail.users.messages.get({
+      userId: "me",
+      id: messageId,
+    });
+
+    const parts = message.data.payload.parts || [];
+
+    // 🔹 2. Find attachment by filename
+    let attachmentId = null;
+    let mimeType = "application/octet-stream";
+
+    const findAttachment = (parts) => {
+      for (const part of parts) {
+        if (part.filename === filename && part.body?.attachmentId) {
+          attachmentId = part.body.attachmentId;
+          mimeType = part.mimeType;
+          return;
+        }
+        if (part.parts) {
+          findAttachment(part.parts);
+        }
+      }
+    };
+
+    findAttachment(parts);
+
+    if (!attachmentId) {
+      return res.status(404).json({ message: "Attachment not found" });
+    }
+
+    // 🔹 3. Fetch attachment
+    const attachment = await gmail.users.messages.attachments.get({
+      userId: "me",
+      messageId,
+      id: attachmentId,
+    });
+
+    const fileData = attachment.data.data;
+
+    const buffer = Buffer.from(fileData, "base64");
+
+    // 🔹 4. Send file
+    res.setHeader("Content-Type", mimeType);
+    res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
+
+    res.send(buffer);
   } catch (error) {
     next(error);
   }
