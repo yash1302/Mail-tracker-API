@@ -19,7 +19,7 @@ export const createDraftService = async (data) => {
       html_Body: html,
       text_body: text,
       body_preview: text.slice(0, 200),
-      title,
+      draftTitle: title,
       attachmentsMeta,
     });
 
