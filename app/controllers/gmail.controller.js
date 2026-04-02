@@ -21,6 +21,7 @@ import utils, {
 } from "../../common/utils.js";
 import { gmailMessages } from "../messages/gmail.messages.js";
 import { v4 as uuidv4 } from "uuid";
+import { createFollowUpService } from "../services/followup.services.js";
 const { GMAILACCOUNTNOTFOUND } = gmailMessages;
 
 const { verifyToken } = utils;
@@ -273,6 +274,14 @@ export const sendEmailController = async (
           }
 
           const email = await createTrackedEmailService(emailData);
+          await createFollowUpService({
+            emailId: email._id,
+            threadId: email.gmailThreadId,
+            followUpCount: 0,
+            nextFollowUpDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+            status: "Pending",
+            isActive: true,
+          });
 
           return { success: true, data: email };
         } catch (error) {

@@ -2,6 +2,7 @@ export const routesConstants = {
   AUTH: "/api/auth",
   GMAIL: "/api/gmail",
   DRAFT: "/api/draft",
+  FOLLOWUP: "/api/followup",
 };
 
 export const authRoutesConstants = {
@@ -27,4 +28,12 @@ export const draftRoutesConstants = {
   DELETE_DRAFT: "/:draftId",
   UPDATE_DRAFT: "/",
   GET_DRAFT: "/:draftId",
+};
+
+export const followUpRoutesConstants = {
+  CREATE_FOLLOWUP: "/create",
+  GET_FOLLOWUPS: "/list",
+  UPDATE_FOLLOWUP: "/:followUpId",
+  DELETE_FOLLOWUP: "/:followUpId",
+  CHECK_REPLIES: "/check-replies",
 };

@@ -5,7 +5,8 @@ import { mongoConnection } from "./connection.js";
 import gmailRoutes from "./routes/gmail.routes.js";
 import { routesConstants } from "../constants/routes.constants.js";
 import draftRoutes from "./routes/draft.routes.js";
-const { AUTH, GMAIL, DRAFT } = routesConstants;
+import followUpRoutes from "./routes/followup.routes.js";
+const { AUTH, GMAIL, DRAFT, FOLLOWUP } = routesConstants;
 
 mongoConnection();
 
@@ -25,6 +26,7 @@ const routes = [
   { path: AUTH, route: authRoutes },
   { path: GMAIL, route: gmailRoutes },
   { path: DRAFT, route: draftRoutes },
+  { path: FOLLOWUP, route: followUpRoutes },
 ];
 
 routes.forEach(({ path, route }) => {

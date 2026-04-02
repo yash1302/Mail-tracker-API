@@ -121,3 +121,30 @@ export const getClickStatsService = async (trackingId) => {
     throw error;
   }
 };
+
+export const checkRepliesService = async (userId) => {
+  try {
+    const emails = await trackedEmailModel.find({
+      userId,
+      isReplied: false,
+      status: "SENT",
+    });
+    return emails;
+  } catch (error) {
+    console.error("Check Replies Service Error:", error);
+    throw error;
+  }
+};
+
+export const updateTrackedEmailService = async (emailId) => {
+  try {
+    const updatedEmail = await trackedEmailModel.updateOne(
+      { _id: emailId },
+      { isReplied: true },
+    );
+    return updatedEmail;
+  } catch (error) {
+    console.error(error);
+    throw error;
+  }
+};
