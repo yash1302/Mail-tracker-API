@@ -23,12 +23,14 @@ export const updateFollowUpService = async (threadId) => {
   }
 };
 
-export const getFollowUpsService = async (userId) => {
+export const getFollowUpsService = async (userId, gmailAccountId) => {
   try {
     const now = new Date();
 
     const followups = await followupModel
       .find({
+        userId,
+        gmailAccountId,
         isActive: true,
         status: "Pending",
         followUpCount: { $lt: 3 },
@@ -38,16 +40,31 @@ export const getFollowUpsService = async (userId) => {
 
     return followups
       .filter((f) => f.emailId && !f.emailId.isReplied)
-      .map((f) => ({
-        followUpId: f._id,
-        emailId: f.emailId._id,
-        to: f.emailId.to,
-        subject: f.emailId.subject,
-        htmlBody: f.emailId.htmlBody,
-        followUpCount: f.followUpCount,
-        nextFollowUpDate: f.nextFollowUpDate,
-        threadId: f.threadId,
-      }));
+      .map((f) => {
+        const sentAt = new Date(f.emailId.sentAt);
+        const now = new Date();
+
+        const daysSince = Math.floor(
+          (now.getTime() - sentAt.getTime()) / (1000 * 60 * 60 * 24),
+        );
+
+        return {
+          followUpId: f._id,
+          emailId: f.emailId._id,
+          to: f.emailId.to,
+          cc: f.emailId.cc,
+          bcc: f.emailId.bcc,
+          subject: f.emailId.subject,
+          htmlBody: f.emailId.htmlBody,
+          opens: f.emailId.opensCount,
+          sentAt: f.emailId.sentAt,
+          daysSince,
+          followUpCount: f.followUpCount,
+          nextFollowUpDate: f.nextFollowUpDate,
+          status: f.status,
+          threadId: f.threadId,
+        };
+      });
   } catch (error) {
     throw error;
   }

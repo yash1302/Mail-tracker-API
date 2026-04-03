@@ -281,6 +281,8 @@ export const sendEmailController = async (
             nextFollowUpDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
             status: "Pending",
             isActive: true,
+            userId: userId,
+            gmailAccountId: gmailAccountId,
           });
 
           return { success: true, data: email };

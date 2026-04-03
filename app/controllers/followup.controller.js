@@ -5,29 +5,31 @@ import {
   getGmailAccountByIdService,
   updateTrackedEmailService,
 } from "../services/gmail.services.js";
-import { updateFollowUpService } from "../services/followup.services.js";
+import { getFollowUpsService, updateFollowUpService } from "../services/followup.services.js";
 
-export const checkRepliesController = async (userId, gmailAccountId, Email) => {
+export const checkRepliesController = async (userId, gmailAccountId) => {
   try {
     const account = await getGmailAccountByIdService(gmailAccountId, userId);
-    const emails = await checkRepliesService(userId);
+    const emails = await checkRepliesService(userId, gmailAccountId);
     if (!emails.length) {
-      throw new Error("No tracked emails found for this account");
+      return {
+        success: true,
+        totalChecked: 0,
+        repliesFound: 0,
+        data: [],
+      };
     }
+    const auth = getOAuthClient(account.refreshToken);
+
+    const gmail = google.gmail({
+      version: "v1",
+      auth,
+    });
 
     const results = [];
 
     for (const email of emails) {
       try {
-        // 2. Get OAuth client (you already use this in send)
-        const auth = getOAuthClient(account.refreshToken);
-
-        const gmail = google.gmail({
-          version: "v1",
-          auth,
-        });
-
-        // 3. Get thread
         const thread = await gmail.users.threads.get({
           userId: "me",
           id: email.gmailThreadId,
@@ -35,7 +37,6 @@ export const checkRepliesController = async (userId, gmailAccountId, Email) => {
 
         const messages = thread.data.messages || [];
 
-        // 4. Check if any message is from someone else
         const hasReply = messages.some((msg) => {
           const headers = msg.payload.headers;
 
@@ -43,13 +44,12 @@ export const checkRepliesController = async (userId, gmailAccountId, Email) => {
 
           if (!fromHeader) return false;
 
-          return !fromHeader.value.includes(Email);
+          return !fromHeader.value.includes(account.email);
         });
 
         if (hasReply) {
           await updateTrackedEmailService(email._id);
 
-          // 6. Stop follow-ups (if using FollowUp model)
           await updateFollowUpService(email.gmailThreadId);
 
           results.push({
@@ -79,10 +79,9 @@ export const checkRepliesController = async (userId, gmailAccountId, Email) => {
   }
 };
 
-
-export const getFollowUpsController = async (userId) => {
+export const getFollowUpsController = async (userId, gmailAccountId) => {
   try {
-    const followups = await getFollowUpsService(userId);
+    const followups = await getFollowUpsService(userId, gmailAccountId);
 
     return {
       success: true,

@@ -6,6 +6,17 @@ const followUpSchema = new mongoose.Schema({
     ref: "TrackedEmail",
     index: true,
   },
+  userId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "User", // optional but good
+    index: true,
+  },
+
+  gmailAccountId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "GmailAccount", // optional but good
+    index: true,
+  },
 
   threadId: { type: String, index: true },
 

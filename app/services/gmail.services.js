@@ -122,10 +122,11 @@ export const getClickStatsService = async (trackingId) => {
   }
 };
 
-export const checkRepliesService = async (userId) => {
+export const checkRepliesService = async (userId,gmailAccountId) => {
   try {
     const emails = await trackedEmailModel.find({
       userId,
+      gmailAccountId,
       isReplied: false,
       status: "SENT",
     });

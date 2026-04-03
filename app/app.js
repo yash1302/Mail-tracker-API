@@ -16,11 +16,11 @@ app.use(cors());
 app.use(express.json());
 
 app.get("/", (req, res) => {
-  res.send("API running 🚀");
+  res.send("API running ");
 });
 
 app.get("/api/test", (req, res) => {
-  res.send("Test route working 🚀");
+  res.send("Test route working ");
 });
 const routes = [
   { path: AUTH, route: authRoutes },
