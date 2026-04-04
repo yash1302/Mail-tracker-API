@@ -69,3 +69,12 @@ export const findDraftByIdService = async (draftId) => {
     throw error;
   }
 };
+
+export const deleteDraftService = async (draftId) => {
+  try {
+    await DraftModel.findByIdAndDelete(draftId);
+    return { message: "Draft deleted successfully" };
+  } catch (error) {
+    throw error;
+  }
+};

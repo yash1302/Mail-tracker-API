@@ -2,6 +2,7 @@ import { stripHtml } from "../../common/utils.js";
 import { draftMessages } from "../messages/draft.messages.js";
 import {
   createDraftService,
+  deleteDraftService,
   findDraftByIdService,
   getAllDraftsService,
   updateDraftService,
@@ -16,8 +17,6 @@ export const createDraftController = async (files, body) => {
   try {
     const attachmentsMeta = await uploadFilesToCloudinary(files);
     body.attachmentsMeta = attachmentsMeta;
-
-    // 🔥 2. Process body
     const html = body.body || "";
     const text = stripHtml(html);
 
@@ -102,6 +101,22 @@ export const updateDraftController = async (id, body, files) => {
     return updatedDraft;
   } catch (error) {
     console.error("Update Draft Error:", error);
+    throw error;
+  }
+};
+
+export const deleteDraftController = async (id) => {
+  try {
+    const existingDraft = await findDraftByIdService(id);
+
+    if (!existingDraft) {
+      throw new Error("Draft not found");
+    }
+
+    await deleteDraftService(id);
+    return { message: DRAFTDELETED };
+  } catch (error) {
+    console.error("Delete Draft Error:", error);
     throw error;
   }
 };
