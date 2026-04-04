@@ -4,6 +4,7 @@ import dotenv from "dotenv";
 import { v2 as cloudinary } from "cloudinary";
 import { google } from "googleapis";
 import sanitizeHtml from "sanitize-html";
+import axios from "axios";
 
 dotenv.config();
 
@@ -155,16 +156,23 @@ export const linkifyIfNeeded = (html) => {
   });
 };
 
+const getResourceType = (mimeType) => {
+  if (mimeType.startsWith("image/")) return "image";
+  if (mimeType.startsWith("video/")) return "video";
+  return "raw"; // 🔥 pdf, doc, zip, etc.
+};
+
 const uploadFilesToCloudinary = async (files = []) => {
   if (!files.length) return [];
 
   return await Promise.all(
     files.map((file) => {
       return new Promise((resolve, reject) => {
+        const resourceType = getResourceType(file.mimetype);
         const stream = cloudinary.uploader.upload_stream(
           {
             folder: "email_drafts",
-            resource_type: "auto",
+            resource_type: resourceType,
           },
           (error, result) => {
             if (error) return reject(error);
@@ -185,6 +193,14 @@ const uploadFilesToCloudinary = async (files = []) => {
   );
 };
 
+const downloadFileFromUrl = async (url) => {
+  const response = await axios.get(url, {
+    responseType: "arraybuffer",
+  });
+
+  return Buffer.from(response.data);
+};
+
 export default {
   hashPassword,
   verifyPassword,
@@ -192,4 +208,5 @@ export default {
   verifyToken,
   imageUpload,
   uploadFilesToCloudinary,
+  downloadFileFromUrl,
 };

@@ -22,9 +22,10 @@ import utils, {
 import { gmailMessages } from "../messages/gmail.messages.js";
 import { v4 as uuidv4 } from "uuid";
 import { createFollowUpService } from "../services/followup.services.js";
+import { getAttachmentsMetaByDraftIdService } from "../services/draft.services.js";
 const { GMAILACCOUNTNOTFOUND } = gmailMessages;
 
-const { verifyToken } = utils;
+const { verifyToken, downloadFileFromUrl } = utils;
 
 export const connectGmail = async (req, res) => {
   try {
@@ -123,6 +124,7 @@ export const sendEmailController = async (
   userId,
   attachmentIds = [],
   files = [],
+  draftId = null,
 ) => {
   try {
     const account = await getGmailAccountByIdService(gmailAccountId, userId);
@@ -138,7 +140,10 @@ export const sendEmailController = async (
 
     let storedAttachments = [];
     if (attachmentIds.length) {
-      storedAttachments = await getAttachmentsByIdsService(attachmentIds);
+      storedAttachments = await getAttachmentsMetaByDraftIdService(
+        draftId,
+        attachmentIds,
+      );
     }
 
     const batch_size = 5;
@@ -201,21 +206,21 @@ export const sendEmailController = async (
 
           const attachmentParts = [];
 
-          // for (const file of storedAttachments) {
-          //   const fileBuffer = await downloadFileFromUrl(file.fileUrl);
+          for (const file of storedAttachments) {
+            const fileBuffer = await downloadFileFromUrl(file.url);
 
-          //   attachmentParts.push(
-          //     [
-          //       `--${outerBoundary}`,
-          //       `Content-Type: ${file.mimeType}; name="${file.filename}"`,
-          //       "Content-Transfer-Encoding: base64",
-          //       `Content-Disposition: attachment; filename="${file.filename}"`,
-          //       "",
-          //       fileBuffer.toString("base64"),
-          //       "",
-          //     ].join("\r\n"),
-          //   );
-          // }
+            attachmentParts.push(
+              [
+                `--${outerBoundary}`,
+                `Content-Type: ${file.mimeType}; name="${file.filename}"`,
+                "Content-Transfer-Encoding: base64",
+                `Content-Disposition: attachment; filename="${file.filename}"`,
+                "",
+                fileBuffer.toString("base64"),
+                "",
+              ].join("\r\n"),
+            );
+          }
 
           for (const file of processedFiles) {
             attachmentParts.push(

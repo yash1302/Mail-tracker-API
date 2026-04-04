@@ -14,6 +14,7 @@ const draftSchema = new mongoose.Schema({
       filename: String,
       mimeType: String,
       size: Number,
+      url: String,
     },
   ],
   draftTitle: String,

@@ -62,6 +62,7 @@ gmailRoutes.post(SEND_EMAIL, upload.array("files"), async (req, res, next) => {
       gmailAccountId,
       userId,
       attachmentIds = [],
+      draftId
     } = req?.body;
     const files = req?.files || [];
     const result = await sendEmailController(
@@ -74,6 +75,7 @@ gmailRoutes.post(SEND_EMAIL, upload.array("files"), async (req, res, next) => {
       userId,
       JSON.parse(attachmentIds),
       files,
+      draftId
     );
     res.status(200).json(new responseHandler(result));
   } catch (error) {

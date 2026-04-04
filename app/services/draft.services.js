@@ -78,3 +78,22 @@ export const deleteDraftService = async (draftId) => {
     throw error;
   }
 };
+
+export const getAttachmentsMetaByDraftIdService = async (
+  draftId,
+  attachmentIds,
+) => {
+  try {
+    const draft = await DraftModel.findOne(
+      { _id: draftId },
+      {
+        attachmentsMeta: {
+          $elemMatch: { _id: { $in: attachmentIds } },
+        },
+      },
+    );
+    return draft ? draft.attachmentsMeta : [];
+  } catch (error) {
+    throw error;
+  }
+};
