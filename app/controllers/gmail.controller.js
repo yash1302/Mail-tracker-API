@@ -23,6 +23,9 @@ import { gmailMessages } from "../messages/gmail.messages.js";
 import { v4 as uuidv4 } from "uuid";
 import { createFollowUpService } from "../services/followup.services.js";
 import { getAttachmentsMetaByDraftIdService } from "../services/draft.services.js";
+import trackedEmailModel from "../models/trackedEmail.model.js";
+import DraftModel from "../models/draftModels.js";
+import followupModel from "../models/followup.model.js";
 const { GMAILACCOUNTNOTFOUND } = gmailMessages;
 
 const { verifyToken, downloadFileFromUrl } = utils;
@@ -448,5 +451,125 @@ export const downloadAttachmentController = async (req, res, next) => {
     res.send(buffer);
   } catch (error) {
     next(error);
+  }
+};
+
+export const getDashboardKPIController = async (userId, gmailAccountId) => {
+  try {
+    if (!userId || !gmailAccountId) {
+      throw new Error("userId and gmailAccountId are required");
+    }
+
+    const baseFilter = { userId, gmailAccountId };
+    const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+
+    const [
+      totalSent,
+      totalReplied,
+      totalClicked,
+      totalDrafts,
+
+      // emails that got at least one follow-up
+      followedUpEmailIds,
+
+      // old emails with no reply
+      oldUnrepliedEmails,
+
+      // emails that already have follow-up
+      emailsWithFollowup,
+    ] = await Promise.all([
+      // total sent
+      trackedEmailModel.countDocuments({ ...baseFilter, status: "SENT" }),
+
+      // replies
+      trackedEmailModel.countDocuments({
+        ...baseFilter,
+        status: "SENT",
+        isReplied: true,
+      }),
+
+      // clicked (interest)
+      trackedEmailModel.countDocuments({
+        ...baseFilter,
+        status: "SENT",
+        clicksCount: { $gt: 0 },
+      }),
+
+      // drafts
+      DraftModel.countDocuments({ userId }),
+
+      // emails that have followups
+      followupModel.distinct("emailId", {
+        userId,
+        gmailAccountId,
+        followUpCount: { $gt: 0 },
+        isActive: true,
+      }),
+
+      // old unreplied emails
+      trackedEmailModel.find(
+        {
+          ...baseFilter,
+          status: "SENT",
+          isReplied: false,
+          sentAt: { $lte: sevenDaysAgo },
+        },
+        { _id: 1 },
+      ),
+
+      // emails that already have followup
+      followupModel.distinct("emailId", {
+        userId,
+        gmailAccountId,
+        isActive: true,
+      }),
+    ]);
+
+    // unique followed up emails
+    const uniqueFollowedUp = followedUpEmailIds.length;
+
+    // convert to set for fast lookup
+    const emailsWithFollowupSet = new Set(
+      emailsWithFollowup.map((id) => id.toString()),
+    );
+
+    // follow-up needed (important KPI)
+    const followupNeeded = oldUnrepliedEmails.filter(
+      (e) => !emailsWithFollowupSet.has(e._id.toString()),
+    ).length;
+
+    // derived KPIs
+    const replyRate =
+      totalSent > 0 ? Math.round((totalReplied / totalSent) * 100) : 0;
+
+    const clickRate =
+      totalSent > 0 ? Math.round((totalClicked / totalSent) * 100) : 0;
+
+    const interestedLeads = Math.max(totalClicked - totalReplied, 0);
+
+    const noResponse = totalSent - totalReplied - totalClicked;
+
+    return {
+      success: true,
+      data: {
+        totalSent,
+        totalReplied,
+        replyRate,
+
+        totalClicked,
+        clickRate,
+
+        interestedLeads, // ⭐ BEST KPI
+        noResponse, // ⭐ ACTION KPI
+
+        uniqueFollowedUp,
+        followupNeeded,
+
+        totalDrafts, // optional (can remove later)
+      },
+    };
+  } catch (error) {
+    console.error("getDashboardKPI error:", error);
+    throw error;
   }
 };

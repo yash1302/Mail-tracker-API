@@ -20,6 +20,7 @@ export const gmailRoutesConstants = {
   GET_EMAILS: "/",
   GET_CLICK_STATS: "/t/stats/:trackingId",
   DOWNLOAD_ATTACHMENT: "/attachment/:messageId/:filename",
+  DASHBOARD_KPI: "/dashboard-kpi",
 };
 
 export const draftRoutesConstants = {

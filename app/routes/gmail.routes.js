@@ -4,6 +4,7 @@ import {
   deleteGmailAccountController,
   downloadAttachmentController,
   getClickStatsController,
+  getDashboardKPIController,
   getEmailsController,
   getGmailAccountsController,
   oauthCallback,
@@ -24,6 +25,7 @@ const {
   GET_EMAILS,
   GET_CLICK_STATS,
   DOWNLOAD_ATTACHMENT,
+  DASHBOARD_KPI,
 } = gmailRoutesConstants;
 
 const gmailRoutes = express.Router();
@@ -62,7 +64,7 @@ gmailRoutes.post(SEND_EMAIL, upload.array("files"), async (req, res, next) => {
       gmailAccountId,
       userId,
       attachmentIds = [],
-      draftId
+      draftId,
     } = req?.body;
     const files = req?.files || [];
     const result = await sendEmailController(
@@ -75,7 +77,7 @@ gmailRoutes.post(SEND_EMAIL, upload.array("files"), async (req, res, next) => {
       userId,
       JSON.parse(attachmentIds),
       files,
-      draftId
+      draftId,
     );
     res.status(200).json(new responseHandler(result));
   } catch (error) {
@@ -106,5 +108,15 @@ gmailRoutes.get(GET_CLICK_STATS, async (req, res, next) => {
 });
 
 gmailRoutes.get(DOWNLOAD_ATTACHMENT, downloadAttachmentController);
+
+gmailRoutes.get(DASHBOARD_KPI, async (req, res, next) => {
+  try {
+    const { userId, gmailAccountId } = req.query;
+    const kpiData = await getDashboardKPIController(userId, gmailAccountId);
+    res.status(200).json(new responseHandler(kpiData));
+  } catch (error) {
+    next(error);
+  }
+});
 
 export default gmailRoutes;
