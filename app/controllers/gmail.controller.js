@@ -97,9 +97,9 @@ export const oauthCallback = async (req, res) => {
   }
 };
 
-export const getGmailAccountsController = async () => {
+export const getGmailAccountsController = async (userId) => {
   try {
-    const gmailAccounts = await getGmailAccountsService();
+    const gmailAccounts = await getGmailAccountsService(userId);
     return gmailAccounts;
   } catch (error) {
     console.error(error);
@@ -496,7 +496,7 @@ export const getDashboardKPIController = async (userId, gmailAccountId) => {
       }),
 
       // drafts
-      DraftModel.countDocuments({ userId }),
+      DraftModel.countDocuments({ userId,gmailAccountId }),
 
       // emails that have followups
       followupModel.distinct("emailId", {

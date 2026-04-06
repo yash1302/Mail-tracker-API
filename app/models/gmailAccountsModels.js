@@ -8,6 +8,7 @@ const gmailAccountSchema = new mongoose.Schema({
   tokenExpiry: { type: Date, required: true },
   createdAt: { type: Date, default: Date.now },
   isPrimary: { type: Boolean, default: false },
+  isActive: { type: Boolean, default: true },
 });
 gmailAccountSchema.index({ userId: 1, email: 1 }, { unique: true });
 

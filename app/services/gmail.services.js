@@ -18,6 +18,7 @@ export const insertGmailAccountService = async ({
           refreshToken,
           tokenExpiry,
           ...(isPrimary !== undefined && { isPrimary }),
+          isActive: true,
         },
       },
       {
@@ -33,9 +34,9 @@ export const insertGmailAccountService = async ({
   }
 };
 
-export const getGmailAccountsService = async () => {
+export const getGmailAccountsService = async (userId) => {
   try {
-    const gmailAccounts = await GmailAccount.find();
+    const gmailAccounts = await GmailAccount.find({ userId, isActive: true });
     return gmailAccounts;
   } catch (error) {
     console.error(error);
@@ -55,7 +56,20 @@ export const getGmailAccountByEmailAndUserIdService = async (email, userId) => {
 
 export const deleteGmailAccountService = async (email, userId) => {
   try {
-    const result = await GmailAccount.deleteOne({ email, userId });
+    const result = await GmailAccount.findOneAndUpdate(
+      { email, userId },
+      {
+        $set: {
+          isActive: false, // 👈 mark inactive
+          accessToken: null, // optional (security)
+          refreshToken: null, // optional
+          tokenExpiry: null, // optional
+          isPrimary: false, // optional
+        },
+      },
+      { new: true },
+    );
+
     return result;
   } catch (error) {
     console.error(error);

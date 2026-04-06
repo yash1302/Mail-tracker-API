@@ -31,13 +31,14 @@ const {
 
 const gmailRoutes = express.Router();
 
-gmailRoutes.get(CONNECT, authenticateJwtToken, connectGmail);
+gmailRoutes.get(CONNECT, connectGmail);
 
 gmailRoutes.get(OAUTH2CALLBACK, oauthCallback);
 
 gmailRoutes.get(GMAIL_ACCOUNT, authenticateJwtToken, async (req, res, next) => {
   try {
-    const result = await getGmailAccountsController();
+    const { id } = res.locals;
+    const result = await getGmailAccountsController(id);
     res.status(200).json(new responseHandler(result));
   } catch (error) {
     next(error);
