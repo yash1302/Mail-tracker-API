@@ -122,7 +122,7 @@ export const getClickStatsService = async (trackingId) => {
   }
 };
 
-export const checkRepliesService = async (userId,gmailAccountId) => {
+export const checkRepliesService = async (userId, gmailAccountId) => {
   try {
     const emails = await trackedEmailModel.find({
       userId,

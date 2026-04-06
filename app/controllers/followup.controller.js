@@ -6,6 +6,7 @@ import {
   updateTrackedEmailService,
 } from "../services/gmail.services.js";
 import { getFollowUpsService, updateFollowUpService } from "../services/followup.services.js";
+import followupModel from "../models/followup.model.js";
 
 export const checkRepliesController = async (userId, gmailAccountId) => {
   try {
@@ -95,4 +96,55 @@ export const getFollowUpsController = async (userId, gmailAccountId) => {
       message: "Failed to fetch followups",
     };
   }
+};
+
+
+export const updateFollowUpStatusController = async (followUpId, action) => {
+  if (!followUpId || !action) {
+    throw new Error("followUpId and action are required");
+  }
+
+  const validActions = ["snooze", "dismiss", "complete","resume"];
+  if (!validActions.includes(action)) {
+    throw new Error(`Invalid action. Must be one of: ${validActions.join(", ")}`);
+  }
+
+  let update = {};
+
+  if (action === "snooze") {
+    const nextDate = new Date();
+    nextDate.setDate(nextDate.getDate() + 7);
+    update = {
+      nextFollowUpDate: nextDate,
+      status: "Pending",
+      isActive: true,
+    };
+  } else if (action === "dismiss") {
+    update = {
+      status: "Ignored",
+      isActive: false,
+    };
+  } else if (action === "complete") {
+    update = {
+      status: "Completed",
+      isActive: false,
+      lastFollowUpSentAt: new Date(),
+    };
+  } else if (action === "resume") {
+    update = {
+      status: "Pending",
+      isActive: true,
+    };
+  }
+
+
+  const updated = await followupModel.findByIdAndUpdate(
+    followUpId,
+    { $set: update },
+    { new: true }
+  );
+
+  if (!updated) throw new Error("Follow-up not found");
+
+  return updated;
 };

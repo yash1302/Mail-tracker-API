@@ -4,12 +4,15 @@ import { followUpRoutesConstants } from "../../constants/routes.constants.js";
 import {
   checkRepliesController,
   getFollowUpsController,
+  updateFollowUpStatusController,
 } from "../controllers/followup.controller.js";
-const { CHECK_REPLIES, GET_FOLLOWUPS } = followUpRoutesConstants;
+import { authenticateJwtToken } from "../../middleware/authentication.middleware.js";
+const { CHECK_REPLIES, GET_FOLLOWUPS, UPDATE_FOLLOWUP_STATUS } =
+  followUpRoutesConstants;
 
 const followUpRoutes = express.Router();
 
-followUpRoutes.post(CHECK_REPLIES, async (req, res, next) => {
+followUpRoutes.post(CHECK_REPLIES,authenticateJwtToken, async (req, res, next) => {
   try {
     const { userId, gmailAccountId } = req?.body || {};
     const result = await checkRepliesController(userId, gmailAccountId);
@@ -19,10 +22,21 @@ followUpRoutes.post(CHECK_REPLIES, async (req, res, next) => {
   }
 });
 
-followUpRoutes.get(GET_FOLLOWUPS, async (req, res, next) => {
+followUpRoutes.get(GET_FOLLOWUPS, authenticateJwtToken, async (req, res, next) => {
   try {
     const { userId, gmailAccountId } = req?.query || {};
     const result = await getFollowUpsController(userId, gmailAccountId);
+    res.status(200).json(new responseHandler(result));
+  } catch (error) {
+    next(error);
+  }
+});
+
+followUpRoutes.patch(UPDATE_FOLLOWUP_STATUS, authenticateJwtToken, async (req, res, next) => {
+  try {
+    const { followUpId } = req.params;
+    const { action } = req.body;
+    const result = await updateFollowUpStatusController(followUpId, action);
     res.status(200).json(new responseHandler(result));
   } catch (error) {
     next(error);

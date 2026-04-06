@@ -8,6 +8,7 @@ import {
 } from "../controllers/draft.controller.js";
 import { responseHandler } from "../../common/messageHandlers.js";
 import upload from "../middleware/multer.js";
+import { authenticateJwtToken } from "../../middleware/authentication.middleware.js";
 
 const draftRoutes = express.Router();
 const { GET_DRAFTS, CREATE_DRAFT, UPDATE_DRAFT, DELETE_DRAFT } =
@@ -15,6 +16,7 @@ const { GET_DRAFTS, CREATE_DRAFT, UPDATE_DRAFT, DELETE_DRAFT } =
 
 draftRoutes.post(
   CREATE_DRAFT,
+  authenticateJwtToken,
   upload.array("files"),
   async (req, res, next) => {
     try {
@@ -28,7 +30,7 @@ draftRoutes.post(
   },
 );
 
-draftRoutes.get(GET_DRAFTS, async (req, res, next) => {
+draftRoutes.get(GET_DRAFTS, authenticateJwtToken, async (req, res, next) => {
   try {
     const { userId, gmailAccountId } = req?.query || {};
 
@@ -39,7 +41,7 @@ draftRoutes.get(GET_DRAFTS, async (req, res, next) => {
   }
 });
 
-draftRoutes.put(UPDATE_DRAFT, upload.array("files"), async (req, res, next) => {
+draftRoutes.put(UPDATE_DRAFT, authenticateJwtToken, upload.array("files"), async (req, res, next) => {
   try {
     const { id } = req.query;
     const body = req.body;
@@ -51,7 +53,7 @@ draftRoutes.put(UPDATE_DRAFT, upload.array("files"), async (req, res, next) => {
   }
 });
 
-draftRoutes.delete(DELETE_DRAFT, async (req, res, next) => {
+draftRoutes.delete(DELETE_DRAFT, authenticateJwtToken, async (req, res, next) => {
   try {
     const { id } = req.query;
     const result = await deleteDraftController(id);

@@ -7,6 +7,7 @@ import {
 } from "../services/user.services.js";
 import utils from "../../common/utils.js";
 import { authMessages } from "../messages/auth.messages.js";
+import GmailAccount from "../models/gmailAccountsModels.js";
 
 const { USERPRESENT, LOGINFAILURE, UNAUTHORIZED } = authMessages;
 
@@ -55,10 +56,13 @@ export const login = async (email, password) => {
       throw UNAUTHORIZED;
     }
 
+    const gmailAccount = await GmailAccount.findOne({ userId: user._id });
+
     const accessToken = await generateJwtToken({
       id: user.id,
       email: user.email,
       name: user.name,
+      gmailAccountId: gmailAccount ? gmailAccount._id : null,
     });
 
     return accessToken;
