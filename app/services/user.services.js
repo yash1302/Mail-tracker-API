@@ -30,3 +30,13 @@ export const getUsersService = async () => {
     throw error;
   }
 };
+
+export const getUserByIdService = async (userId) => {
+  try {
+    const user = await User.findById(userId);
+    return user;
+  } catch (error) {
+    console.error(error);
+    throw error;
+  }
+};

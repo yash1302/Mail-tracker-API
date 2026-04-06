@@ -56,13 +56,10 @@ export const login = async (email, password) => {
       throw UNAUTHORIZED;
     }
 
-    const gmailAccount = await GmailAccount.findOne({ userId: user._id });
-
     const accessToken = await generateJwtToken({
       id: user.id,
       email: user.email,
       name: user.name,
-      gmailAccountId: gmailAccount ? gmailAccount._id : null,
     });
 
     return accessToken;

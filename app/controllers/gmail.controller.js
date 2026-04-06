@@ -26,6 +26,7 @@ import { getAttachmentsMetaByDraftIdService } from "../services/draft.services.j
 import trackedEmailModel from "../models/trackedEmail.model.js";
 import DraftModel from "../models/draftModels.js";
 import followupModel from "../models/followup.model.js";
+import { getUserByIdService } from "../services/user.services.js";
 const { GMAILACCOUNTNOTFOUND } = gmailMessages;
 
 const { verifyToken, downloadFileFromUrl } = utils;
@@ -99,17 +100,31 @@ export const oauthCallback = async (req, res) => {
 
 export const getGmailAccountsController = async (userId) => {
   try {
+    const user = await getUserByIdService(userId);
     const gmailAccounts = await getGmailAccountsService(userId);
-    return gmailAccounts;
+    const result = gmailAccounts.map((account) => ({
+      _id: account._id,
+      userId: account.userId,
+      email: account.email,
+      __v: account.__v,
+      accessToken: account.accessToken,
+      createdAt: account.createdAt,
+      isPrimary: false,
+
+      tokenExpiry: account.tokenExpiry,
+      isActive: account.isActive,
+      user: user,
+    }));
+    return result;
   } catch (error) {
     console.error(error);
     throw error;
   }
 };
 
-export const deleteGmailAccountController = async (email, userId) => {
+export const deleteGmailAccountController = async (gmailAccountId) => {
   try {
-    const result = await deleteGmailAccountService(email, userId);
+    const result = await deleteGmailAccountService(gmailAccountId);
     return result;
   } catch (error) {
     console.error(error);
@@ -496,7 +511,7 @@ export const getDashboardKPIController = async (userId, gmailAccountId) => {
       }),
 
       // drafts
-      DraftModel.countDocuments({ userId,gmailAccountId }),
+      DraftModel.countDocuments({ userId, gmailAccountId }),
 
       // emails that have followups
       followupModel.distinct("emailId", {

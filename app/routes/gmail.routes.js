@@ -50,8 +50,8 @@ gmailRoutes.delete(
   authenticateJwtToken,
   async (req, res, next) => {
     try {
-      const { email, userId } = req?.body;
-      const result = await deleteGmailAccountController(email, userId);
+      const { gmailAccountId } = req?.body;
+      const result = await deleteGmailAccountController(gmailAccountId);
       res.status(200).json(new responseHandler(result));
     } catch (error) {
       next(error);

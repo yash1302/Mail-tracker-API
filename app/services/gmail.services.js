@@ -54,17 +54,17 @@ export const getGmailAccountByEmailAndUserIdService = async (email, userId) => {
   }
 };
 
-export const deleteGmailAccountService = async (email, userId) => {
+export const deleteGmailAccountService = async (gmailAccountId) => {
   try {
     const result = await GmailAccount.findOneAndUpdate(
-      { email, userId },
+      { _id: gmailAccountId },
       {
         $set: {
-          isActive: false, // 👈 mark inactive
-          accessToken: null, // optional (security)
-          refreshToken: null, // optional
-          tokenExpiry: null, // optional
-          isPrimary: false, // optional
+          isActive: false, 
+          accessToken: null, 
+          refreshToken: null, 
+          tokenExpiry: null,
+          isPrimary: false,
         },
       },
       { new: true },

@@ -1,4 +1,4 @@
-import { messageHandler } from "../common/messageHandlers.js";
+import { messageHandler, responseHandler } from "../common/messageHandlers.js";
 import utils from "../common/utils.js";
 import { errorMessages } from "../constants/responseMessages.constants.js";
 import { errorStatusCodes } from "../constants/responseStatus.constants.js";
