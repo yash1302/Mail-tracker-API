@@ -98,7 +98,6 @@ gmailRoutes.post(
 
 gmailRoutes.get(
   CLICK_LINK_TRACKING,
-  authenticateJwtToken,
   trackClickController,
 );
 
