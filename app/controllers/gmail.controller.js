@@ -27,6 +27,8 @@ import trackedEmailModel from "../models/trackedEmail.model.js";
 import DraftModel from "../models/draftModels.js";
 import followupModel from "../models/followup.model.js";
 import { getUserByIdService } from "../services/user.services.js";
+import dotenv from "dotenv";
+dotenv.config();
 const { GMAILACCOUNTNOTFOUND } = gmailMessages;
 
 const { verifyToken, downloadFileFromUrl } = utils;
@@ -91,7 +93,7 @@ export const oauthCallback = async (req, res) => {
     });
 
     // 4. Redirect to frontend
-    res.redirect("http://localhost:5173/dashboard/");
+    res.redirect(`${process.env.FRONTEND_URL}dashboard/`);
   } catch (err) {
     console.log(err);
     res.send("OAuth Failed");
