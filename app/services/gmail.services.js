@@ -60,9 +60,9 @@ export const deleteGmailAccountService = async (gmailAccountId) => {
       { _id: gmailAccountId },
       {
         $set: {
-          isActive: false, 
-          accessToken: null, 
-          refreshToken: null, 
+          isActive: false,
+          accessToken: null,
+          refreshToken: null,
           tokenExpiry: null,
           isPrimary: false,
         },
@@ -105,14 +105,22 @@ export const getTrackedEmailsService = async ({ userId, gmailAccountId }) => {
 };
 
 export const incrementClickCountService = async (trackingId) => {
-  return trackedEmailModel.findOneAndReplace(
-    { trackingId },
-    {
-      $inc: { clicksCount: 1 },
-      $set: { lastActivityAt: new Date(), lastClickedAt: new Date() },
-    },
-    { new: true },
-  );
+  try {
+    return await trackedEmailModel.findOneAndUpdate(
+      { trackingId },
+      {
+        $inc: { clicksCount: 1 },
+        $set: {
+          lastActivityAt: new Date(),
+          lastClickedAt: new Date(),
+        },
+      },
+      { new: true },
+    );
+  } catch (error) {
+    console.error(error);
+    throw error;
+  }
 };
 
 export const getClickStatsService = async (trackingId) => {
