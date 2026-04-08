@@ -390,6 +390,7 @@ export const getEmailsController = async (userId, gmailAccountId) => {
       clicksCount: email.clicksCount || 0,
       opensCount: email.opensCount || 0,
       isReplied: email.isReplied || false,
+      htmlBody: email.htmlBody,
     }));
   } catch (error) {
     console.error("Error fetching emails:", error);
