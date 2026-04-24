@@ -103,6 +103,7 @@ export const getTrackedEmailsService = async ({ userId, gmailAccountId }) => {
   try {
     const messages = await messageModel.find({ userId, gmailAccountId });
 
+    // 🔥 SORT (latest first)
     messages.sort(
       (a, b) =>
         new Date(b.sentAt || b.receivedAt) -
@@ -121,21 +122,44 @@ export const getTrackedEmailsService = async ({ userId, gmailAccountId }) => {
           participants: new Set(),
           messages: [],
           lastActivityAt: activityTime,
+          totalClicks: 0,
+          isReplied: false,
+          repliesCount: 0,
         };
       }
 
-      // add participants
-      msg.to?.forEach((p) => threadMap[msg.threadId].participants.add(p));
-      msg.cc?.forEach((p) => threadMap[msg.threadId].participants.add(p));
-      msg.bcc?.forEach((p) => threadMap[msg.threadId].participants.add(p));
-      if (msg.from) threadMap[msg.threadId].participants.add(msg.from);
+      // 🔥 normalize email (important)
+      const normalizeEmail = (email) =>
+        email?.match(/<(.+)>/)?.[1] || email;
 
-      // push message WITH normalized time
+      msg.to?.forEach((p) =>
+        threadMap[msg.threadId].participants.add(normalizeEmail(p)),
+      );
+      msg.cc?.forEach((p) =>
+        threadMap[msg.threadId].participants.add(normalizeEmail(p)),
+      );
+      msg.bcc?.forEach((p) =>
+        threadMap[msg.threadId].participants.add(normalizeEmail(p)),
+      );
+      if (msg.from)
+        threadMap[msg.threadId].participants.add(normalizeEmail(msg.from));
+
+      // push message
       threadMap[msg.threadId].messages.push({
         ...msg.toObject(),
-        sentAt: activityTime, // 👈 normalize here
+        sentAt: activityTime,
       });
 
+      // ✅ ONLY count incoming replies
+      if (msg.type === "reply" && msg.direction === "incoming") {
+        threadMap[msg.threadId].isReplied = true;
+        threadMap[msg.threadId].repliesCount += 1;
+      }
+
+      // clicks
+      threadMap[msg.threadId].totalClicks += Number(msg.clicksCount || 0);
+
+      // last activity
       if (activityTime > threadMap[msg.threadId].lastActivityAt) {
         threadMap[msg.threadId].lastActivityAt = activityTime;
       }

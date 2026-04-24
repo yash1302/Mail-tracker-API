@@ -315,6 +315,7 @@ export const sendEmailController = async (
             textBody: stripHtml(finalHtml),
             bodyPreview: stripHtml(finalHtml).slice(0, 200),
             trackingId,
+            direction: "outgoing",
             attachmentsMeta: [
               ...storedAttachments.map((f) => ({
                 filename: f.filename,
@@ -413,9 +414,12 @@ export const getEmailsController = async (userId, gmailAccountId) => {
       subject: thread.subject,
       participants: thread.participants,
       lastActivityAt: thread.lastActivityAt,
+      totalClicks: thread.totalClicks,
+      isReplied: thread.isReplied,
+      repliesCount: thread.repliesCount,
 
       messages: thread.messages.map((email) => ({
-        id: email.id,
+        id: email._id,
         type: email.type, // initial | followup | reply
         from: email.from,
         to: email.to,
@@ -426,6 +430,7 @@ export const getEmailsController = async (userId, gmailAccountId) => {
         htmlBody: email.htmlBody,
         trackingId: email.trackingId,
         sentAt: email.sentAt,
+        direction: email.direction,
         status: email.status || "sent",
         attachmentsMeta: email.attachmentsMeta || [],
         messageId: email.gmailMessageId,

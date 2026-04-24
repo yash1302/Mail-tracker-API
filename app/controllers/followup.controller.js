@@ -108,7 +108,7 @@ export const checkRepliesController = async (userId, gmailAccountId) => {
             threadId: email.threadId,
             gmailMessageId,
             type: "reply",
-
+            direction: "incoming",
             from,
             to,
             subject,
@@ -220,6 +220,15 @@ export const sendFollowUpController = async (
       version: "v1",
       auth,
     });
+
+    const hasReply = await messageModel.exists({
+      threadId: email.threadId,
+      type: "reply",
+      direction: "incoming",
+    });
+
+    // 🔥 DECIDE TYPE
+    const finalType = hasReply ? "reply" : "followup";
 
     const thread = await gmail.users.threads.get({
       userId: "me",
@@ -357,7 +366,8 @@ export const sendFollowUpController = async (
       gmailAccountId,
       threadId: email.threadId,
       gmailMessageId: response.data.id,
-      type: "followup",
+      type: finalType,
+      direction: "outgoing",
 
       from: account.email,
       to: email.to,
@@ -382,23 +392,27 @@ export const sendFollowUpController = async (
 
       sentAt: new Date(),
     });
-
-    await followupModel.findOneAndUpdate(
-      { threadId: email.threadId, userId },
-      {
-        $inc: { followUpCount: 1 },
-        $set: {
-          lastFollowUpSentAt: new Date(),
-          nextFollowUpDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
-          status: "Pending",
-          isActive: true,
+    if (finalType === "followup") {
+      await followupModel.findOneAndUpdate(
+        { threadId: email.threadId, userId },
+        {
+          $inc: { followUpCount: 1 },
+          $set: {
+            lastFollowUpSentAt: new Date(),
+            nextFollowUpDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+            status: "Pending",
+            isActive: true,
+          },
         },
-      },
-    );
+      );
+    }
 
     return {
       success: true,
-      message: "Follow-up sent successfully",
+      message:
+        finalType === "reply"
+          ? "Reply sent successfully"
+          : "Follow-up sent successfully",
     };
   } catch (error) {
     console.error("Send Follow-up Error:", error);

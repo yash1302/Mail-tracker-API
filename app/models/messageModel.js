@@ -10,6 +10,12 @@ const messageSchema = new mongoose.Schema({
     enum: ["initial", "followup", "reply"],
     index: true,
   },
+  direction: {
+    type: String,
+    enum: ["outgoing", "incoming"],
+    required: true,
+    index: true,
+  },
   from: String,
   to: [String],
   cc: [String],

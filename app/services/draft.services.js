@@ -6,20 +6,21 @@ export const createDraftService = async (data) => {
       userId,
       gmailAccountId,
       subject,
-      title,
+      draftTitle,
       attachmentsMeta,
-      html,
-      text,
+      htmlBody,
+      textBody,
+      bodyPreview
     } = data;
 
     const draft = await DraftModel.create({
       userId,
       gmailAccountId,
       subject,
-      htmlBody: html,
-      textBody: text,
-      bodyPreview: text.slice(0, 200),
-      draftTitle: title,
+      htmlBody: htmlBody,
+      textBody: textBody,
+      bodyPreview: bodyPreview,
+      draftTitle: draftTitle,
       attachmentsMeta,
     });
 

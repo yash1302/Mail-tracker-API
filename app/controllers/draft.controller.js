@@ -20,14 +20,17 @@ export const createDraftController = async (files, body) => {
     const html = body.body || "";
     const text = stripHtml(html);
 
+    console.log(text, "<<< text");
+    console.log(text.slice(0, 200), "<<< preview");
     const result = await createDraftService({
       userId: body.userId,
       gmailAccountId: body.gmailAccountId,
       subject: body.subject,
-      title: body.title,
+      htmlBody: html,
+      textBody: text,
+      bodyPreview: text.slice(0, 200),
+      draftTitle: body.title,
       attachmentsMeta,
-      html,
-      text,
     });
 
     return result;
@@ -49,9 +52,9 @@ export const getAllDraftsController = async (userId, gmailAccountId) => {
       id: draft._id,
       title: draft.draftTitle,
       subject: draft.subject,
-      htmlBody: draft.html_Body,
-      textBody: draft.text_body,
-      bodyPreview: draft.body_preview,
+      htmlBody: draft.htmlBody,
+      textBody: draft.textBody,
+      bodyPreview: draft.bodyPreview,
       attachments: draft.attachmentsMeta || [],
       createdAt: draft.createdAt,
       updatedAt: draft.updatedAt,

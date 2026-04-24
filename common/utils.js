@@ -103,7 +103,7 @@ export const replaceLinksWithTracking = (html, trackingId) => {
 
     const encoded = encodeURIComponent(url);
 
-    const trackedUrl = `${process.env.API_URL}api/gmail/t/click/${trackingId}?url=${encoded}`;
+    const trackedUrl = `${process.env.API_URL}/api/gmail/t/click/${trackingId}?url=${encoded}`;
 
     return `href="${trackedUrl}" target="_blank" rel="noopener noreferrer"`;
   });
