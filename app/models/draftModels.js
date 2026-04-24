@@ -4,11 +4,10 @@ const draftSchema = new mongoose.Schema({
   userId: { type: mongoose.Schema.Types.ObjectId, index: true },
   gmailAccountId: { type: mongoose.Schema.Types.ObjectId, index: true },
   subject: String,
-  html_Body: String,
-  text_body: String,
-  body_preview: String,
-  createdAt: { type: Date, default: Date.now },
-  updatedAt: { type: Date, default: Date.now },
+  htmlBody: String,
+  textBody: String,
+  bodyPreview: String,
+  draftTitle: String,
   attachmentsMeta: [
     {
       filename: String,
@@ -17,7 +16,8 @@ const draftSchema = new mongoose.Schema({
       url: String,
     },
   ],
-  draftTitle: String,
+  createdAt: { type: Date, default: Date.now },
+  updatedAt: { type: Date, default: Date.now },
 });
-const DraftModel = mongoose.model("Draft", draftSchema);
-export default DraftModel;
+
+export default mongoose.model("Draft", draftSchema);

@@ -1,5 +1,7 @@
 import GmailAccount from "../models/gmailAccountsModels.js";
-import trackedEmailModel from "../models/trackedEmail.model.js";
+import threadModel from "../models/threadModel.js";
+import MessageModel from "../models/messageModel.js";
+import messageModel from "../models/messageModel.js";
 
 export const insertGmailAccountService = async ({
   userId,
@@ -54,6 +56,8 @@ export const getGmailAccountByEmailAndUserIdService = async (email, userId) => {
   }
 };
 
+// Instead of deleting the Gmail account record, we will mark it as inactive and clear sensitive data.
+// This way we can keep a history of connected accounts without losing data permanently.
 export const deleteGmailAccountService = async (gmailAccountId) => {
   try {
     const result = await GmailAccount.findOneAndUpdate(
@@ -77,6 +81,8 @@ export const deleteGmailAccountService = async (gmailAccountId) => {
   }
 };
 
+// This service is used to fetch a specific Gmail account by its ID, ensuring it belongs to the user and is active.
+// This is useful for operations that require validating the account before performing actions like sending emails or tracking.
 export const getGmailAccountByIdService = async (gmailAccountId, userId) => {
   return GmailAccount.findOne({
     _id: gmailAccountId,
@@ -86,7 +92,7 @@ export const getGmailAccountByIdService = async (gmailAccountId, userId) => {
 
 export const createTrackedEmailService = async (data) => {
   try {
-    return await trackedEmailModel.create(data);
+    return await messageModel.create(data);
   } catch (error) {
     console.error(error);
     throw error;
@@ -95,23 +101,73 @@ export const createTrackedEmailService = async (data) => {
 
 export const getTrackedEmailsService = async ({ userId, gmailAccountId }) => {
   try {
-    return trackedEmailModel
-      .find({ userId, gmailAccountId })
-      .sort({ sentAt: -1 });
+    const messages = await messageModel.find({ userId, gmailAccountId });
+
+    messages.sort(
+      (a, b) =>
+        new Date(b.sentAt || b.receivedAt) -
+        new Date(a.sentAt || a.receivedAt),
+    );
+
+    const threadMap = {};
+
+    for (const msg of messages) {
+      const activityTime = msg.sentAt || msg.receivedAt;
+
+      if (!threadMap[msg.threadId]) {
+        threadMap[msg.threadId] = {
+          threadId: msg.threadId,
+          subject: msg.subject,
+          participants: new Set(),
+          messages: [],
+          lastActivityAt: activityTime,
+        };
+      }
+
+      // add participants
+      msg.to?.forEach((p) => threadMap[msg.threadId].participants.add(p));
+      msg.cc?.forEach((p) => threadMap[msg.threadId].participants.add(p));
+      msg.bcc?.forEach((p) => threadMap[msg.threadId].participants.add(p));
+      if (msg.from) threadMap[msg.threadId].participants.add(msg.from);
+
+      // push message WITH normalized time
+      threadMap[msg.threadId].messages.push({
+        ...msg.toObject(),
+        sentAt: activityTime, // 👈 normalize here
+      });
+
+      if (activityTime > threadMap[msg.threadId].lastActivityAt) {
+        threadMap[msg.threadId].lastActivityAt = activityTime;
+      }
+    }
+
+    const result = Object.values(threadMap).map((thread) => {
+      thread.messages.sort(
+        (a, b) => new Date(a.sentAt) - new Date(b.sentAt),
+      );
+
+      return {
+        ...thread,
+        participants: Array.from(thread.participants),
+      };
+    });
+
+    return result;
   } catch (error) {
     console.error(error);
     throw error;
   }
 };
 
+// This service helps to tracks nos of clicks on that email and when was last
+// click happened.
 export const incrementClickCountService = async (trackingId) => {
   try {
-    return await trackedEmailModel.findOneAndUpdate(
+    return await messageModel.findOneAndUpdate(
       { trackingId },
       {
         $inc: { clicksCount: 1 },
         $set: {
-          lastActivityAt: new Date(),
           lastClickedAt: new Date(),
         },
       },
@@ -125,7 +181,7 @@ export const incrementClickCountService = async (trackingId) => {
 
 export const getClickStatsService = async (trackingId) => {
   try {
-    const email = await trackedEmailModel.findOne({ trackingId });
+    const email = await messageModel.findOne({ trackingId });
 
     if (!email) {
       throw new Error("Tracking ID not found");
@@ -146,11 +202,10 @@ export const getClickStatsService = async (trackingId) => {
 
 export const checkRepliesService = async (userId, gmailAccountId) => {
   try {
-    const emails = await trackedEmailModel.find({
+    const emails = await messageModel.find({
       userId,
       gmailAccountId,
       isReplied: false,
-      status: "SENT",
     });
     return emails;
   } catch (error) {
@@ -159,15 +214,61 @@ export const checkRepliesService = async (userId, gmailAccountId) => {
   }
 };
 
-export const updateTrackedEmailService = async (emailId) => {
+export const updateTrackedEmailService = async (threadId) => {
   try {
-    const updatedEmail = await trackedEmailModel.updateOne(
-      { _id: emailId },
+    return await messageModel.updateMany(
+      { threadId, type: "initial" },
       { isReplied: true },
     );
-    return updatedEmail;
   } catch (error) {
-    console.error(error);
+    console.error("Update Message Error:", error);
+    throw error;
+  }
+};
+
+export const createThreadService = async ({
+  threadId,
+  userId,
+  gmailAccountId,
+  subject,
+  participants = [],
+}) => {
+  try {
+    const now = new Date();
+
+    return await threadModel.updateOne(
+      { gmailThreadId: threadId, userId },
+      {
+        $setOnInsert: {
+          userId,
+          gmailAccountId,
+          gmailThreadId: threadId,
+          subject,
+          createdAt: now,
+        },
+        $set: {
+          lastMessageAt: now,
+          lastActivityAt: now,
+        },
+        $addToSet: {
+          participants: {
+            $each: participants.filter(Boolean),
+          },
+        },
+      },
+      { upsert: true },
+    );
+  } catch (error) {
+    console.error("Create Thread Error:", error);
+    throw error;
+  }
+};
+
+export const createMessageService = async (data) => {
+  try {
+    return await MessageModel.create(data);
+  } catch (error) {
+    console.error("Create Message Error:", error);
     throw error;
   }
 };

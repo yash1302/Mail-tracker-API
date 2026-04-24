@@ -16,9 +16,9 @@ export const createDraftService = async (data) => {
       userId,
       gmailAccountId,
       subject,
-      html_Body: html,
-      text_body: text,
-      body_preview: text.slice(0, 200),
+      htmlBody: html,
+      textBody: text,
+      bodyPreview: text.slice(0, 200),
       draftTitle: title,
       attachmentsMeta,
     });
@@ -46,7 +46,7 @@ export const getAllDraftsService = async (userId, gmailAccountId) => {
 
 export const updateDraftService = async (draftId, updateData) => {
   try {
-    const updatedDraft = await DraftModel.findByIdAndUpdate(
+    return await DraftModel.findByIdAndUpdate(
       draftId,
       {
         ...updateData,
@@ -54,13 +54,10 @@ export const updateDraftService = async (draftId, updateData) => {
       },
       { new: true },
     );
-
-    return updatedDraft;
   } catch (error) {
     throw error;
   }
 };
-
 export const findDraftByIdService = async (draftId) => {
   try {
     const draft = await DraftModel.findById(draftId);
@@ -79,6 +76,9 @@ export const deleteDraftService = async (draftId) => {
   }
 };
 
+// This service is used to fetch metadata for specific attachments within a draft.
+// It takes the draft ID and an array of attachment IDs, and returns the metadata for those attachments if they exist in the draft.
+// This is useful for operations that need to access or manage attachments associated with a draft email.
 export const getAttachmentsMetaByDraftIdService = async (
   draftId,
   attachmentIds,

@@ -11,23 +11,29 @@ import utils from "../../common/utils.js";
 
 const { uploadFilesToCloudinary } = utils;
 
-const { DRAFTCREATED, DRAFTNOTFOUND, DRAFTDELETED } = draftMessages;
+const { DRAFTDELETED } = draftMessages;
 
 export const createDraftController = async (files, body) => {
   try {
     const attachmentsMeta = await uploadFilesToCloudinary(files);
-    body.attachmentsMeta = attachmentsMeta;
+
     const html = body.body || "";
     const text = stripHtml(html);
 
-    body.html = html;
-    body.text = text;
-    const result = await createDraftService(body);
+    const result = await createDraftService({
+      userId: body.userId,
+      gmailAccountId: body.gmailAccountId,
+      subject: body.subject,
+      title: body.title,
+      attachmentsMeta,
+      html,
+      text,
+    });
 
     return result;
   } catch (error) {
     console.error("Create Draft Error:", error);
-    next(error);
+    throw error;
   }
 };
 
@@ -65,6 +71,7 @@ export const updateDraftController = async (id, body, files) => {
     if (!existingDraft) {
       throw new Error("Draft not found");
     }
+
     let existingIds = [];
 
     if (body.existingAttachments) {
@@ -85,15 +92,15 @@ export const updateDraftController = async (id, body, files) => {
 
     const finalAttachments = [...keptAttachments, ...newAttachments];
 
-    const html = body.body ?? existingDraft.html_Body;
+    const html = body.body ?? existingDraft.htmlBody;
     const text = stripHtml(html);
 
     const updatedDraft = await updateDraftService(id, {
       draftTitle: body.title ?? existingDraft.draftTitle,
       subject: body.subject ?? existingDraft.subject,
-      html_Body: html,
-      text_body: text,
-      body_preview: text.slice(0, 200),
+      htmlBody: html,
+      textBody: text,
+      bodyPreview: text.slice(0, 200),
       attachmentsMeta: finalAttachments,
       updatedAt: new Date(),
     });

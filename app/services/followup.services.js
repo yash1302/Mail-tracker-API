@@ -1,71 +1,90 @@
 import followupModel from "../models/followup.model.js";
+import messageModel from "../models/messageModel.js";
 
-export const createFollowUpService = async (followUpData) => {
-  try {
-    const followUp = new followupModel(followUpData);
-    return await followUp.save();
-  } catch (error) {
-    throw error;
-  }
+export const createFollowUpService = async ({
+  threadId,
+  userId,
+  gmailAccountId,
+}) => {
+  const existing = await followupModel.findOne({ threadId, userId });
+  if (existing) return existing;
+
+  return followupModel.create({
+    threadId,
+    userId,
+    gmailAccountId,
+    followUpCount: 0,
+    nextFollowUpDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+    status: "Pending",
+    isActive: true,
+  });
 };
 
-export const updateFollowUpService = async (threadId) => {
+export const updateFollowUpService = async (threadId, userId) => {
   try {
     return await followupModel.updateMany(
-      { threadId },
+      { threadId, userId },
       {
         status: "Completed",
         isActive: false,
+        stoppedReason: "REPLIED",
       },
     );
   } catch (error) {
+    console.error("Update FollowUp Error:", error);
     throw error;
   }
 };
 
 export const getFollowUpsService = async (userId, gmailAccountId) => {
-  try {
-    const now = new Date();
+  const now = new Date();
 
-    const followups = await followupModel
-      .find({
+  const followups = await followupModel.find({
+    userId,
+    gmailAccountId,
+    isActive: true,
+    status: "Pending",
+    followUpCount: { $lt: 3 },
+    nextFollowUpDate: { $lte: now },
+  });
+
+  const results = [];
+
+  for (const f of followups) {
+    const lastMessage = await messageModel
+      .findOne({
+        threadId: f.threadId,
         userId,
         gmailAccountId,
-        isActive: true,
-        status: "Pending",
-        followUpCount: { $lt: 3 },
-        nextFollowUpDate: { $lte: now },
       })
-      .populate("emailId");
+      .sort({ sentAt: -1 });
 
-    return followups
-      .filter((f) => f.emailId && !f.emailId.isReplied)
-      .map((f) => {
-        const sentAt = new Date(f.emailId.sentAt);
-        const now = new Date();
+    if (!lastMessage || lastMessage.isReplied) continue;
 
-        const daysSince = Math.floor(
-          (now.getTime() - sentAt.getTime()) / (1000 * 60 * 60 * 24),
-        );
+    const daysSince = Math.floor(
+      (now - new Date(lastMessage.sentAt)) / (1000 * 60 * 60 * 24),
+    );
 
-        return {
-          followUpId: f._id,
-          emailId: f.emailId._id,
-          to: f.emailId.to,
-          cc: f.emailId.cc,
-          bcc: f.emailId.bcc,
-          subject: f.emailId.subject,
-          htmlBody: f.emailId.htmlBody,
-          opens: f.emailId.opensCount,
-          sentAt: f.emailId.sentAt,
-          daysSince,
-          followUpCount: f.followUpCount,
-          nextFollowUpDate: f.nextFollowUpDate,
-          status: f.status,
-          threadId: f.threadId,
-        };
-      });
-  } catch (error) {
-    throw error;
+    results.push({
+      followUpId: f._id,
+      threadId: f.threadId,
+
+      to: lastMessage.to,
+      cc: lastMessage.cc,
+      bcc: lastMessage.bcc,
+
+      subject: lastMessage.subject,
+      htmlBody: lastMessage.htmlBody,
+
+      opens: lastMessage.opensCount,
+      sentAt: lastMessage.sentAt,
+
+      daysSince,
+      followUpCount: f.followUpCount,
+      nextFollowUpDate: f.nextFollowUpDate,
+      status: f.status,
+    });
   }
+
+  return results;
 };

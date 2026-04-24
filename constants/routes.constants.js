@@ -38,4 +38,5 @@ export const followUpRoutesConstants = {
   DELETE_FOLLOWUP: "/:followUpId",
   CHECK_REPLIES: "/check-replies",
   UPDATE_FOLLOWUP_STATUS: "/:followUpId/status",
+  SEND_FOLLOWUP: "/send-followup",
 };

@@ -1,9 +1,9 @@
 import { google } from "googleapis";
 import { oauth2Client } from "../config/google.js";
 import {
-  createTrackedEmailService,
+  createMessageService,
+  createThreadService,
   deleteGmailAccountService,
-  getClickStatsService,
   getGmailAccountByEmailAndUserIdService,
   getGmailAccountByIdService,
   getGmailAccountsService,
@@ -23,16 +23,17 @@ import { gmailMessages } from "../messages/gmail.messages.js";
 import { v4 as uuidv4 } from "uuid";
 import { createFollowUpService } from "../services/followup.services.js";
 import { getAttachmentsMetaByDraftIdService } from "../services/draft.services.js";
-import trackedEmailModel from "../models/trackedEmail.model.js";
 import DraftModel from "../models/draftModels.js";
 import followupModel from "../models/followup.model.js";
 import { getUserByIdService } from "../services/user.services.js";
 import dotenv from "dotenv";
+import messageModel from "../models/messageModel.js";
 dotenv.config();
 const { GMAILACCOUNTNOTFOUND } = gmailMessages;
 
 const { verifyToken, downloadFileFromUrl } = utils;
 
+// this controller is used to connect user's Gmail account via OAuth and store the credentials in DB
 export const connectGmail = async (req, res) => {
   try {
     const token = req.query.token;
@@ -56,6 +57,7 @@ export const connectGmail = async (req, res) => {
   }
 };
 
+// this controller handles the OAuth callback, exchanges code for tokens, fetches user email and stores everything in DB
 export const oauthCallback = async (req, res) => {
   try {
     const code = req.query.code;
@@ -93,13 +95,14 @@ export const oauthCallback = async (req, res) => {
     });
 
     // 4. Redirect to frontend
-    res.redirect(`${process.env.FRONTEND_URL}dashboard/`);
+    res.redirect(`${process.env.FRONTEND_URL}/dashboard/`);
   } catch (err) {
     console.log(err);
     res.send("OAuth Failed");
   }
 };
 
+// controller to fetch all connected Gmail accounts for a user
 export const getGmailAccountsController = async (userId) => {
   try {
     const user = await getUserByIdService(userId);
@@ -124,6 +127,7 @@ export const getGmailAccountsController = async (userId) => {
   }
 };
 
+// controller to delete (deactivate) a Gmail account connection
 export const deleteGmailAccountController = async (gmailAccountId) => {
   try {
     const result = await deleteGmailAccountService(gmailAccountId);
@@ -134,6 +138,8 @@ export const deleteGmailAccountController = async (gmailAccountId) => {
   }
 };
 
+// controller to send email using Gmail API, with support for attachments, tracking pixels, and link tracking.
+// It also creates corresponding records in the database for the sent email, thread, and follow-up.
 export const sendEmailController = async (
   to,
   cc,
@@ -148,16 +154,14 @@ export const sendEmailController = async (
 ) => {
   try {
     const account = await getGmailAccountByIdService(gmailAccountId, userId);
-
     if (!account) throw new Error(GMAILACCOUNTNOTFOUND);
 
+    // getOAuthClient will create a new OAuth client instance with the account's refresh token,
+    // which allows us to make authenticated requests to Gmail API on behalf of the user.
     const auth = getOAuthClient(account.refreshToken);
+    const gmail = google.gmail({ version: "v1", auth });
 
-    const gmail = google.gmail({
-      version: "v1",
-      auth,
-    });
-
+    // storedAttachments will hold the metadata of attachments that are already uploaded and associated with the draft.
     let storedAttachments = [];
     if (attachmentIds.length) {
       storedAttachments = await getAttachmentsMetaByDraftIdService(
@@ -166,14 +170,16 @@ export const sendEmailController = async (
       );
     }
 
-    const batch_size = 5;
-    const results = [];
-
+    // processedFiles will convert the newly uploaded files into a format suitable for sending via Gmail API,
+    // including converting the file buffer to base64 string.
     const processedFiles = files.map((file) => ({
       filename: file.originalname,
       mimeType: file.mimetype,
       base64: file.buffer.toString("base64"),
     }));
+
+    const batch_size = 5;
+    const results = [];
 
     for (let i = 0; i < to.length; i += batch_size) {
       const batch = to.slice(i, i + batch_size);
@@ -181,15 +187,11 @@ export const sendEmailController = async (
       const batchPromises = batch.map(async (recipient) => {
         try {
           const trackingId = uuidv4();
-
           let finalHtml = html;
 
           finalHtml = sanitizeEmailHtml(finalHtml);
-
           finalHtml = linkifyIfNeeded(finalHtml);
-
           finalHtml = replaceLinksWithTracking(finalHtml, trackingId);
-
           finalHtml = addTrackingPixel(finalHtml, trackingId);
 
           const outerBoundary = `mixed_${Date.now()}_${Math.random()}`;
@@ -275,42 +277,69 @@ export const sendEmailController = async (
             requestBody: { raw: encodedMessage },
           });
 
-          const emailData = {
+          const threadId = response.data.threadId;
+          const messageId = response.data.id;
+
+          const participants = [
+            account.email,
+            recipient,
+            ...(cc || []),
+            ...(bcc || []),
+          ];
+
+          // these 3 DB uploads kept sequential cuz if any of upload is failed the other would
+          // be created
+
+          // 1. THREAD
+          await createThreadService({
+            threadId,
             userId,
             gmailAccountId,
-            gmailMessageId: response.data.id,
-            gmailThreadId: response.data.threadId,
             subject,
+            participants,
+          });
+
+          // 2. MESSAGE
+          await createMessageService({
+            userId,
+            gmailAccountId,
+            threadId,
+            gmailMessageId: messageId,
+            type: "initial",
+            from: account.email,
             to: [recipient],
             cc,
             bcc,
-            trackingId,
-            bodyPreview: stripHtml(finalHtml).slice(0, 200),
+            subject,
             htmlBody: finalHtml,
             textBody: stripHtml(finalHtml),
-          };
+            bodyPreview: stripHtml(finalHtml).slice(0, 200),
+            trackingId,
+            attachmentsMeta: [
+              ...storedAttachments.map((f) => ({
+                filename: f.filename,
+                mimeType: f.mimeType,
+                size: f.size,
+                url: f.url,
+              })),
+              ...processedFiles.map((f) => ({
+                filename: f.filename,
+                mimeType: f.mimeType,
+                size: f.base64.length,
+              })),
+            ],
 
-          if (processedFiles.length > 0) {
-            emailData.attachmentsMeta = processedFiles.map((file) => ({
-              filename: file.filename,
-              mimeType: file.mimeType,
-              size: file.base64.length,
-            }));
-          }
-
-          const email = await createTrackedEmailService(emailData);
-          await createFollowUpService({
-            emailId: email._id,
-            threadId: email.gmailThreadId,
-            followUpCount: 0,
-            nextFollowUpDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
-            status: "Pending",
-            isActive: true,
-            userId: userId,
-            gmailAccountId: gmailAccountId,
+            sentAt: new Date(),
           });
 
-          return { success: true, data: email };
+          // 3. FOLLOW-UP
+          await createFollowUpService({
+            threadId,
+            userId,
+            gmailAccountId,
+          });
+
+          return { success: true };
         } catch (error) {
           return { success: false, error: error.message };
         }
@@ -333,6 +362,7 @@ export const sendEmailController = async (
   }
 };
 
+// controller to track clicks on links in the email. It increments the click count for the email and redirects the user to the original URL.
 export const trackClickController = async (req, res, next) => {
   try {
     const { trackingId } = req.params;
@@ -368,29 +398,41 @@ export const trackClickController = async (req, res, next) => {
   }
 };
 
+// controller to fetch all tracked emails for a user and Gmail account.
+// It returns the email threads along with their messages and metadata,
+// which can be used to display the email history and analytics in the frontend.
 export const getEmailsController = async (userId, gmailAccountId) => {
   try {
-    const emails = await getTrackedEmailsService({
+    const threads = await getTrackedEmailsService({
       userId,
       gmailAccountId,
     });
 
-    return emails.map((email) => ({
-      id: email.id,
-      subject: email.subject,
-      to: email.to,
-      cc: email.cc,
-      bcc: email.bcc,
-      preview: email.bodyPreview,
-      trackingId: email.trackingId,
-      sentAt: email.sentAt,
-      status: email.status || "sent",
-      attachmentsMeta: email.attachmentsMeta || [],
-      messageId: email.gmailMessageId,
-      clicksCount: email.clicksCount || 0,
-      opensCount: email.opensCount || 0,
-      isReplied: email.isReplied || false,
-      htmlBody: email.htmlBody,
+    return threads.map((thread) => ({
+      threadId: thread.threadId,
+      subject: thread.subject,
+      participants: thread.participants,
+      lastActivityAt: thread.lastActivityAt,
+
+      messages: thread.messages.map((email) => ({
+        id: email.id,
+        type: email.type, // initial | followup | reply
+        from: email.from,
+        to: email.to,
+        cc: email.cc,
+        bcc: email.bcc,
+        subject: email.subject,
+        preview: email.bodyPreview,
+        htmlBody: email.htmlBody,
+        trackingId: email.trackingId,
+        sentAt: email.sentAt,
+        status: email.status || "sent",
+        attachmentsMeta: email.attachmentsMeta || [],
+        messageId: email.gmailMessageId,
+        clicksCount: email.clicksCount || 0,
+        opensCount: email.opensCount || 0,
+        isReplied: email.isReplied || false,
+      })),
     }));
   } catch (error) {
     console.error("Error fetching emails:", error);
@@ -398,16 +440,9 @@ export const getEmailsController = async (userId, gmailAccountId) => {
   }
 };
 
-export const getClickStatsController = async (trackingId) => {
-  try {
-    const data = await getClickStatsService(trackingId);
-
-    return data;
-  } catch (error) {
-    next(error);
-  }
-};
-
+// download attachment controller to handle attachment download requests.
+// It verifies the user's access to the Gmail account, fetches the email message, finds the requested attachment,
+// and sends it as a response with appropriate headers for downloading.
 export const downloadAttachmentController = async (req, res, next) => {
   try {
     const { messageId, filename } = req.params;
@@ -423,7 +458,7 @@ export const downloadAttachmentController = async (req, res, next) => {
 
     const gmail = google.gmail({ version: "v1", auth });
 
-    // 🔹 1. Get full message
+    // 1. Get full message
     const message = await gmail.users.messages.get({
       userId: "me",
       id: messageId,
@@ -431,7 +466,7 @@ export const downloadAttachmentController = async (req, res, next) => {
 
     const parts = message.data.payload.parts || [];
 
-    // 🔹 2. Find attachment by filename
+    // 2. Find attachment by filename
     let attachmentId = null;
     let mimeType = "application/octet-stream";
 
@@ -486,80 +521,60 @@ export const getDashboardKPIController = async (userId, gmailAccountId) => {
 
     const [
       totalSent,
-      totalReplied,
+      totalRepliedThreads,
       totalClicked,
       totalDrafts,
-
-      // emails that got at least one follow-up
-      followedUpEmailIds,
-
-      // old emails with no reply
-      oldUnrepliedEmails,
-
-      // emails that already have follow-up
-      emailsWithFollowup,
+      followedUpThreads,
+      oldUnrepliedThreads,
+      activeFollowupThreads,
     ] = await Promise.all([
-      // total sent
-      trackedEmailModel.countDocuments({ ...baseFilter, status: "SENT" }),
-
-      // replies
-      trackedEmailModel.countDocuments({
+      messageModel.countDocuments({
         ...baseFilter,
-        status: "SENT",
-        isReplied: true,
+        type: "initial",
       }),
 
-      // clicked (interest)
-      trackedEmailModel.countDocuments({
+      messageModel.distinct("threadId", {
         ...baseFilter,
-        status: "SENT",
+        type: "reply",
+      }),
+
+      messageModel.countDocuments({
+        ...baseFilter,
         clicksCount: { $gt: 0 },
       }),
 
-      // drafts
       DraftModel.countDocuments({ userId, gmailAccountId }),
 
-      // emails that have followups
-      followupModel.distinct("emailId", {
+      followupModel.distinct("threadId", {
         userId,
         gmailAccountId,
         followUpCount: { $gt: 0 },
         isActive: true,
       }),
 
-      // old unreplied emails
-      trackedEmailModel.find(
-        {
-          ...baseFilter,
-          status: "SENT",
-          isReplied: false,
-          sentAt: { $lte: sevenDaysAgo },
-        },
-        { _id: 1 },
-      ),
+      messageModel.distinct("threadId", {
+        ...baseFilter,
+        type: "initial",
+        isReplied: false,
+        sentAt: { $lte: sevenDaysAgo },
+      }),
 
-      // emails that already have followup
-      followupModel.distinct("emailId", {
+      followupModel.distinct("threadId", {
         userId,
         gmailAccountId,
         isActive: true,
       }),
     ]);
 
-    // unique followed up emails
-    const uniqueFollowedUp = followedUpEmailIds.length;
+    const totalReplied = totalRepliedThreads.length;
+    const uniqueFollowedUp = followedUpThreads.length;
 
-    // convert to set for fast lookup
-    const emailsWithFollowupSet = new Set(
-      emailsWithFollowup.map((id) => id.toString()),
-    );
+    const activeFollowupSet = new Set(activeFollowupThreads.map(String));
 
-    // follow-up needed (important KPI)
-    const followupNeeded = oldUnrepliedEmails.filter(
-      (e) => !emailsWithFollowupSet.has(e._id.toString()),
+    const followupNeeded = oldUnrepliedThreads.filter(
+      (threadId) => !activeFollowupSet.has(threadId.toString()),
     ).length;
 
-    // derived KPIs
     const replyRate =
       totalSent > 0 ? Math.round((totalReplied / totalSent) * 100) : 0;
 
@@ -580,13 +595,13 @@ export const getDashboardKPIController = async (userId, gmailAccountId) => {
         totalClicked,
         clickRate,
 
-        interestedLeads, // ⭐ BEST KPI
-        noResponse, // ⭐ ACTION KPI
+        interestedLeads,
+        noResponse,
 
         uniqueFollowedUp,
         followupNeeded,
 
-        totalDrafts, // optional (can remove later)
+        totalDrafts,
       },
     };
   } catch (error) {

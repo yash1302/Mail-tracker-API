@@ -3,7 +3,6 @@ import {
   connectGmail,
   deleteGmailAccountController,
   downloadAttachmentController,
-  getClickStatsController,
   getDashboardKPIController,
   getEmailsController,
   getGmailAccountsController,
@@ -107,20 +106,6 @@ gmailRoutes.get(GET_EMAILS, authenticateJwtToken, async (req, res, next) => {
     next(error);
   }
 });
-
-gmailRoutes.get(
-  GET_CLICK_STATS,
-  authenticateJwtToken,
-  async (req, res, next) => {
-    try {
-      const { trackingId } = req.params;
-      const stats = await getClickStatsController(trackingId);
-      res.status(200).json(new responseHandler(stats));
-    } catch (error) {
-      next(error);
-    }
-  },
-);
 
 gmailRoutes.get(
   DOWNLOAD_ATTACHMENT,

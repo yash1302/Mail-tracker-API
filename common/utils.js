@@ -65,6 +65,7 @@ export const getOAuthClient = (refreshToken) => {
   return client;
 };
 
+// helps to add tracking pixels to check if email is opened or not
 export const addTrackingPixel = (html, trackingId) => {
   console.log(
     "PIXEL URL:",
@@ -80,11 +81,12 @@ export const addTrackingPixel = (html, trackingId) => {
   return html + pixel;
 };
 
+// Used to convert link into trackable links by appending the tracking ID and original URL as query parameters.
 export const replaceLinksWithTracking = (html, trackingId) => {
   if (!html) return html;
 
   return html.replace(/href=["'](.*?)["']/gi, (match, url) => {
-    // 🔹 Skip invalid / non-trackable links
+    // Skip invalid / non-trackable links
     if (
       !url ||
       url.startsWith("#") ||
@@ -94,7 +96,7 @@ export const replaceLinksWithTracking = (html, trackingId) => {
       return match;
     }
 
-    // 🔹 Prevent double tracking
+    // Prevent double tracking
     if (url.includes("/t/click/")) {
       return match;
     }
@@ -119,6 +121,8 @@ export const stripHtml = (html) => {
     .trim();
 };
 
+// This util is used to sanitize the HTML content of emails to prevent XSS attacks
+// and ensure that only safe and allowed HTML tags and attributes are included.
 export const sanitizeEmailHtml = (html) => {
   return sanitizeHtml(html, {
     allowedTags: [
@@ -143,10 +147,10 @@ export const sanitizeEmailHtml = (html) => {
   });
 };
 
+// This util is used to convert link in emial body to clickable links if they are not already wrapped in anchor tags.
 export const linkifyIfNeeded = (html) => {
   if (!html) return html;
 
-  // already has links → skip
   if (/<a\s+href=/i.test(html)) return html;
 
   const urlRegex = /(https?:\/\/[^\s<]+)/g;
@@ -193,6 +197,7 @@ const uploadFilesToCloudinary = async (files = []) => {
   );
 };
 
+// gets file from a given URL and returns it as a buffer, whichhas been uploaded to Cloudinary to send as gmail attachment.
 const downloadFileFromUrl = async (url) => {
   const response = await axios.get(url, {
     responseType: "arraybuffer",
@@ -201,6 +206,27 @@ const downloadFileFromUrl = async (url) => {
   return Buffer.from(response.data);
 };
 
+export const cleanReplyBody = (html) => {
+  if (!html) return "";
+
+  // remove quoted gmail content
+  const splitPatterns = [
+    /On\s.+wrote:/i,
+    /From:.+/i,
+    /-----Original Message-----/i,
+  ];
+
+  let cleaned = html;
+
+  for (const pattern of splitPatterns) {
+    const index = cleaned.search(pattern);
+    if (index !== -1) {
+      cleaned = cleaned.slice(0, index);
+    }
+  }
+
+  return cleaned.trim();
+};
 export default {
   hashPassword,
   verifyPassword,
