@@ -8,6 +8,7 @@ import {
 import utils from "../../common/utils.js";
 import { authMessages } from "../messages/auth.messages.js";
 import GmailAccount from "../models/gmailAccountsModels.js";
+import { sendOtpService, verifyOtpService } from "../services/auth.services.js";
 
 const { USERPRESENT, LOGINFAILURE, UNAUTHORIZED } = authMessages;
 
@@ -33,6 +34,7 @@ export const signup = async (name, email, password) => {
     const accessToken = await generateJwtToken({
       id: user.id,
       email: user.email,
+      name: user.name,
     });
 
     return accessToken;
@@ -63,6 +65,26 @@ export const login = async (email, password) => {
     });
 
     return accessToken;
+  } catch (error) {
+    throw error;
+  }
+};
+
+export const sendOtp = async (email) => {
+  try {
+    await sendOtpService(email);
+
+    return { message: "OTP sent successfully" };
+  } catch (error) {
+    throw error;
+  }
+};
+
+export const verifyOtp = async (email, otp) => {
+  try {
+    await verifyOtpService(email, otp);
+
+    return { message: "OTP verified" };
   } catch (error) {
     throw error;
   }

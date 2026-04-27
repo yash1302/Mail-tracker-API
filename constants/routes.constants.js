@@ -8,6 +8,8 @@ export const routesConstants = {
 export const authRoutesConstants = {
   SIGNUP: "/signup",
   LOGIN: "/login",
+  SEND_OTP: "/send-otp",
+  VERIFY_OTP: "/verify-otp",
 };
 
 export const gmailRoutesConstants = {
