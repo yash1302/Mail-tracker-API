@@ -165,13 +165,11 @@ export const updateFollowUpStatusController = async (followUpId, action) => {
   let update = {};
 
   if (action === "snooze") {
-    const nextDate = new Date();
-    nextDate.setDate(nextDate.getDate() + 7);
-    update = { nextFollowUpDate: nextDate };
+    update = { status: "Stopped", isActive: true, stoppedReason: "MANUAL" };
   }
 
   if (action === "dismiss") {
-    update = { status: "Stopped", isActive: false };
+    update = { status: "Stopped", isActive: false, stoppedReason: "MANUAL" };
   }
 
   if (action === "complete") {
@@ -246,7 +244,7 @@ export const sendFollowUpController = async (
 
     let finalHtml = html;
     finalHtml = sanitizeEmailHtml(finalHtml);
-    finalHtml = linkifyIfNeeded(finalHtml);
+    // finalHtml = linkifyIfNeeded(finalHtml);
     finalHtml = replaceLinksWithTracking(finalHtml, trackingId);
     finalHtml = addTrackingPixel(finalHtml, trackingId);
 

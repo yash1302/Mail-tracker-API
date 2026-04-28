@@ -14,7 +14,7 @@ export const createFollowUpService = async ({
     userId,
     gmailAccountId,
     followUpCount: 0,
-    nextFollowUpDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+    nextFollowUpDate:new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
     status: "Pending",
     isActive: true,
   });
@@ -43,7 +43,6 @@ export const getFollowUpsService = async (userId, gmailAccountId) => {
     userId,
     gmailAccountId,
     isActive: true,
-    status: "Pending",
     followUpCount: { $lt: 3 },
     nextFollowUpDate: { $lte: now },
   });
@@ -78,6 +77,7 @@ export const getFollowUpsService = async (userId, gmailAccountId) => {
 
       opens: lastMessage.opensCount,
       sentAt: lastMessage.sentAt,
+      messageId: lastMessage._id,
 
       daysSince,
       followUpCount: f.followUpCount,

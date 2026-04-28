@@ -50,7 +50,6 @@ export const connectGmail = async (req, res) => {
       prompt: "consent",
       state: userId,
     });
-    console.log("CONNECT HIT");
     res.redirect(url);
   } catch (error) {
     res.status(401).json({ message: "Invalid token" });
@@ -190,7 +189,7 @@ export const sendEmailController = async (
           let finalHtml = html;
 
           finalHtml = sanitizeEmailHtml(finalHtml);
-          finalHtml = linkifyIfNeeded(finalHtml);
+          // finalHtml = linkifyIfNeeded(finalHtml);
           finalHtml = replaceLinksWithTracking(finalHtml, trackingId);
           finalHtml = addTrackingPixel(finalHtml, trackingId);
 
@@ -381,13 +380,6 @@ export const trackClickController = async (req, res, next) => {
     const userAgent = req.headers["user-agent"];
     const ip = req.ip;
 
-    console.log("📩 Click Tracked:", {
-      trackingId,
-      decodedUrl,
-      userAgent,
-      ip,
-    });
-
     const isBot = /bot|crawler|spider|crawling/i.test(userAgent);
     if (!isBot) {
       await incrementClickCountService(trackingId);
@@ -524,23 +516,23 @@ export const getDashboardKPIController = async (userId, gmailAccountId) => {
     const baseFilter = { userId, gmailAccountId };
     const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
 
+    // 🔥 Get replied threads using direction (correct way)
+    const repliedThreads = await messageModel.distinct("threadId", {
+      ...baseFilter,
+      direction: "incoming",
+    });
+
     const [
       totalSent,
-      totalRepliedThreads,
       totalClicked,
       totalDrafts,
       followedUpThreads,
-      oldUnrepliedThreads,
+      oldInitialThreads,
       activeFollowupThreads,
     ] = await Promise.all([
       messageModel.countDocuments({
         ...baseFilter,
         type: "initial",
-      }),
-
-      messageModel.distinct("threadId", {
-        ...baseFilter,
-        type: "reply",
       }),
 
       messageModel.countDocuments({
@@ -550,32 +542,41 @@ export const getDashboardKPIController = async (userId, gmailAccountId) => {
 
       DraftModel.countDocuments({ userId, gmailAccountId }),
 
+      // threads where at least 1 follow-up was sent
       followupModel.distinct("threadId", {
         userId,
         gmailAccountId,
         followUpCount: { $gt: 0 },
-        isActive: true,
       }),
 
+      // old threads (older than 7 days)
       messageModel.distinct("threadId", {
         ...baseFilter,
         type: "initial",
-        isReplied: false,
         sentAt: { $lte: sevenDaysAgo },
       }),
 
+      // ✅ only ACTIVE followups (Pending)
       followupModel.distinct("threadId", {
         userId,
         gmailAccountId,
+        status: "Pending",
         isActive: true,
       }),
     ]);
 
-    const totalReplied = totalRepliedThreads.length;
+    const totalReplied = repliedThreads.length;
     const uniqueFollowedUp = followedUpThreads.length;
 
+    const repliedSet = new Set(repliedThreads.map(String));
     const activeFollowupSet = new Set(activeFollowupThreads.map(String));
 
+    // 🔥 Proper unreplied old threads
+    const oldUnrepliedThreads = oldInitialThreads.filter(
+      (threadId) => !repliedSet.has(threadId.toString()),
+    );
+
+    // 🔥 Follow-up needed = old + unreplied + no active follow-up
     const followupNeeded = oldUnrepliedThreads.filter(
       (threadId) => !activeFollowupSet.has(threadId.toString()),
     ).length;
@@ -588,7 +589,8 @@ export const getDashboardKPIController = async (userId, gmailAccountId) => {
 
     const interestedLeads = Math.max(totalClicked - totalReplied, 0);
 
-    const noResponse = totalSent - totalReplied - totalClicked;
+    // ✅ FIXED (no double subtraction)
+    const noResponse = totalSent - totalReplied;
 
     return {
       success: true,
