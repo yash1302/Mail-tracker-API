@@ -1,12 +1,12 @@
 import { generateOTP } from "../../common/utils.js";
 import { sendOTPEmail } from "../config/nodeMailer.js";
 import OTPModel from "../models/otp.model.js";
-import { logInfo } from "./logs.services.js";
+import { logError, logInfo } from "./logs.services.js";
 
 export const sendOtpService = async (email) => {
   try {
     const otp = generateOTP();
-    logInfo(`Generated OTP for ${email}: ${otp}`);
+    await logInfo(`Generated OTP for ${email}: ${otp}`);
     await OTPModel.findOneAndUpdate(
       { email },
       {
@@ -18,11 +18,12 @@ export const sendOtpService = async (email) => {
     );
 
     const result = await sendOTPEmail(email, otp);
-    logInfo(
+    await logInfo(
       `logs from sendOtpService : OTP email sent successfully to ${email} with response ${result.response}`,
     );
     return result;
   } catch (error) {
+    await logError(`Error in sendOtpService for ${email}: ${error.message}`);
     throw error;
   }
 };
