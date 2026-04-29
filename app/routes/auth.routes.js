@@ -7,6 +7,7 @@ import {
 } from "../controllers/authController.js";
 import { authRoutesConstants } from "../../constants/routes.constants.js";
 import { responseHandler } from "../../common/messageHandlers.js";
+import { logInfo } from "../services/logs.services.js";
 
 const authRouter = express.Router();
 const { SIGNUP, LOGIN, SEND_OTP, VERIFY_OTP } = authRoutesConstants;
@@ -33,6 +34,7 @@ authRouter.post(SEND_OTP, async (req, res, next) => {
   try {
     const { email } = req?.body;
     const result = await sendOtp(email);
+    logInfo(`OTP sent to ${email} from auth route`);
     res.status(200).json(new responseHandler(result));
   } catch (error) {
     next(error);

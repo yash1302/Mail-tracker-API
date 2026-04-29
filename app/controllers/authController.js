@@ -9,8 +9,7 @@ import utils from "../../common/utils.js";
 import { authMessages } from "../messages/auth.messages.js";
 import GmailAccount from "../models/gmailAccountsModels.js";
 import { sendOtpService, verifyOtpService } from "../services/auth.services.js";
-import { logError, logInfo } from "../../common/logger.js";
-
+import { logInfo } from "../services/logs.services.js";
 const { USERPRESENT, LOGINFAILURE, UNAUTHORIZED } = authMessages;
 
 const { hashPassword, generateJwtToken, verifyPassword } = utils;
@@ -74,7 +73,7 @@ export const login = async (email, password) => {
 export const sendOtp = async (email) => {
   try {
     await sendOtpService(email);
-
+    logInfo(`OTP sent to ${email} from auth controller`);
     return { message: "OTP sent successfully" };
   } catch (error) {
     throw error;
