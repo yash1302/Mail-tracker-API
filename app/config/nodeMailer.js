@@ -1,26 +1,16 @@
 import dotenv from "dotenv";
 dotenv.config();
-import nodemailer from "nodemailer";
 import { logError, logInfo } from "../services/logs.services.js";
+import { Resend } from "resend";
 
-const transporter = nodemailer.createTransport({
-  host: "smtp.gmail.com",
-  port: 587,
-  secure: false,
-  auth: {
-    user: process.env.EMAIL,
-    pass: process.env.EMAIL_PASS,
-  },
-  debug: true,
-  logger: true,
-});
+const resend = new Resend(process.env.RESEND_API_KEY);
 
 export const sendOTPEmail = async (email, otp) => {
   try {
     await logInfo(`Sending OTP email to ${email}`);
 
-    const result = await transporter.sendMail({
-      from: process.env.EMAIL,
+    const result = await resend.emails.send({
+      from: process.env.EMAIL, // or your custom domain
       to: email,
       subject: "OTP Verification",
       html: `<p>Your OTP is <b>${otp}</b></p>`,
