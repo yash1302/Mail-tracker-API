@@ -1,0 +1,4 @@
+[INFO] 2026-04-29T06:12:12.301Z - Sending OTP to YJ@guerrillamail.info
+[INFO] 2026-04-29T06:12:12.314Z - Generating OTP for YJ@guerrillamail.info
+[INFO] 2026-04-29T06:12:12.379Z - Preparing to send OTP email to YJ@guerrillamail.info
+[INFO] 2026-04-29T06:12:12.399Z - OTP email sent successfully to YJ@guerrillamail.info

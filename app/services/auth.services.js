@@ -1,9 +1,11 @@
+import { logInfo } from "../../common/logger.js";
 import { generateOTP } from "../../common/utils.js";
 import { sendOTPEmail } from "../config/nodeMailer.js";
 import OTPModel from "../models/otp.model.js";
 
 export const sendOtpService = async (email) => {
   try {
+    logInfo(`Generating OTP for ${email}`);
     const otp = generateOTP();
 
     await OTPModel.findOneAndUpdate(
