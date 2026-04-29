@@ -73,12 +73,10 @@ export const login = async (email, password) => {
 
 export const sendOtp = async (email) => {
   try {
-    logInfo(`Sending OTP to ${email}`);
     await sendOtpService(email);
 
     return { message: "OTP sent successfully" };
   } catch (error) {
-    logError(`Error sending OTP to ${email}: ${error.message}`);
     throw error;
   }
 };

@@ -1,7 +1,7 @@
 import dotenv from "dotenv";
 dotenv.config();
 import nodemailer from "nodemailer";
-import { logInfo } from "../../common/logger.js";
+import { logInfo } from "../services/logs.services.js";
 
 const transporter = nodemailer.createTransport({
   service: "gmail",
@@ -12,7 +12,7 @@ const transporter = nodemailer.createTransport({
 });
 
 export const sendOTPEmail = (email, otp) => {
-  logInfo(`Preparing to send OTP email to ${email}`);
+  logInfo(`Sending OTP email to ${email}`);
   const result = transporter.sendMail({
     from: process.env.EMAIL,
     to: email,
