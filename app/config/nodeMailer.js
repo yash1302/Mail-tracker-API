@@ -4,11 +4,15 @@ import nodemailer from "nodemailer";
 import { logError, logInfo } from "../services/logs.services.js";
 
 const transporter = nodemailer.createTransport({
-  service: "gmail",
+  host: "smtp.gmail.com",
+  port: 587,
+  secure: false,
   auth: {
     user: process.env.EMAIL,
     pass: process.env.EMAIL_PASS,
   },
+  debug: true,
+  logger: true,
 });
 
 export const sendOTPEmail = async (email, otp) => {
