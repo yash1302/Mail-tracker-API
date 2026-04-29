@@ -34,7 +34,7 @@ authRouter.post(SEND_OTP, async (req, res, next) => {
   try {
     const { email } = req?.body;
     const result = await sendOtp(email);
-    logInfo(`OTP sent to ${email} from auth route`);
+    logInfo(`OTP sent to ${email} from auth route , and result is  ${result.message}`);
     res.status(200).json(new responseHandler(result));
   } catch (error) {
     next(error);
