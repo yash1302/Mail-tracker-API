@@ -11,9 +11,9 @@ const transporter = nodemailer.createTransport({
   },
 });
 
-export const sendOTPEmail = (email, otp) => {
+export const sendOTPEmail = async (email, otp) => {
   logInfo(`Sending OTP email to ${email}`);
-  const result = transporter.sendMail({
+  const result = await transporter.sendMail({
     from: process.env.EMAIL,
     to: email,
     subject: "OTP Verification",

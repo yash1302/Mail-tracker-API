@@ -72,8 +72,10 @@ export const login = async (email, password) => {
 
 export const sendOtp = async (email) => {
   try {
-    await sendOtpService(email);
-    logInfo(`OTP sent to ${email} from auth controller`);
+    const result = await sendOtpService(email);
+    logInfo(
+      `OTP sent to ${email} from auth controller with result ${result.message}`,
+    );
     return { message: "OTP sent successfully" };
   } catch (error) {
     throw error;

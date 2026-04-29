@@ -17,7 +17,11 @@ export const sendOtpService = async (email) => {
       { upsert: true },
     );
 
-    await sendOTPEmail(email, otp);
+    const result = await sendOTPEmail(email, otp);
+    logInfo(
+      `logs from sendOtpService : OTP email sent successfully to ${email} with response ${result.response}`,
+    );
+    return result;
   } catch (error) {
     throw error;
   }
