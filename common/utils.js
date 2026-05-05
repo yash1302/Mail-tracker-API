@@ -68,7 +68,7 @@ export const getOAuthClient = (refreshToken) => {
 // helps to add tracking pixels to check if email is opened or not
 export const addTrackingPixel = (html, trackingId) => {
   const pixel = ` <img 
-      src="${process.env.API_URL}/api/gmail/t/open/${trackingId}?r=${Math.random()}" 
+      src="${process.env.API_URL}api/gmail/t/open/${trackingId}?r=${Math.random()}" 
       width="1" 
       height="1" 
       style="display:none; opacity:0;" 
@@ -96,7 +96,7 @@ export const replaceLinksWithTracking = (html, trackingId) => {
     }
 
     const encoded = encodeURIComponent(url);
-    const trackedUrl = `${process.env.API_URL}/api/gmail/t/click/${trackingId}?url=${encoded}`;
+    const trackedUrl = `${process.env.API_URL}api/gmail/t/click/${trackingId}?url=${encoded}`;
 
     return `<a ${pre}href="${trackedUrl}" ${post}>`;
   });
