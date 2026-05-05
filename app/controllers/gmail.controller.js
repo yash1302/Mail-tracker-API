@@ -62,12 +62,10 @@ export const oauthCallback = async (req, res) => {
     const code = req.query.code;
     const userId = req.query.state;
 
-    // 1. Exchange code for tokens
     const { tokens } = await oauth2Client.getToken(code);
 
     oauth2Client.setCredentials(tokens);
 
-    // 2. Get user email
     const gmail = google.gmail({
       version: "v1",
       auth: oauth2Client,
@@ -93,7 +91,6 @@ export const oauthCallback = async (req, res) => {
       tokenExpiry: tokens.expiry_date,
     });
 
-    // 4. Redirect to frontend
     res.redirect(`${process.env.FRONTEND_URL}/dashboard/`);
   } catch (err) {
     console.log(err);

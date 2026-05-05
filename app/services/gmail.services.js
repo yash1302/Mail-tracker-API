@@ -106,8 +106,7 @@ export const getTrackedEmailsService = async ({ userId, gmailAccountId }) => {
     // 🔥 SORT (latest first)
     messages.sort(
       (a, b) =>
-        new Date(b.sentAt || b.receivedAt) -
-        new Date(a.sentAt || a.receivedAt),
+        new Date(b.sentAt || b.receivedAt) - new Date(a.sentAt || a.receivedAt),
     );
 
     const threadMap = {};
@@ -129,8 +128,7 @@ export const getTrackedEmailsService = async ({ userId, gmailAccountId }) => {
       }
 
       // 🔥 normalize email (important)
-      const normalizeEmail = (email) =>
-        email?.match(/<(.+)>/)?.[1] || email;
+      const normalizeEmail = (email) => email?.match(/<(.+)>/)?.[1] || email;
 
       msg.to?.forEach((p) =>
         threadMap[msg.threadId].participants.add(normalizeEmail(p)),
@@ -166,9 +164,7 @@ export const getTrackedEmailsService = async ({ userId, gmailAccountId }) => {
     }
 
     const result = Object.values(threadMap).map((thread) => {
-      thread.messages.sort(
-        (a, b) => new Date(a.sentAt) - new Date(b.sentAt),
-      );
+      thread.messages.sort((a, b) => new Date(a.sentAt) - new Date(b.sentAt));
 
       return {
         ...thread,

@@ -4,13 +4,16 @@ import {
   login,
   sendOtp,
   verifyOtp,
+  signupWithGoogle,
+  googleAuthCallback,
 } from "../controllers/authController.js";
 import { authRoutesConstants } from "../../constants/routes.constants.js";
 import { responseHandler } from "../../common/messageHandlers.js";
 import { logInfo } from "../services/logs.services.js";
 
 const authRouter = express.Router();
-const { SIGNUP, LOGIN, SEND_OTP, VERIFY_OTP } = authRoutesConstants;
+const { SIGNUP, LOGIN, SEND_OTP, VERIFY_OTP, SIGNUP_GOOGLE, OAUTH_CALLBACK } =
+  authRoutesConstants;
 authRouter.post(SIGNUP, async (req, res, next) => {
   try {
     const { name, email, password } = req?.body;
@@ -34,7 +37,9 @@ authRouter.post(SEND_OTP, async (req, res, next) => {
   try {
     const { email } = req?.body;
     const result = await sendOtp(email);
-    logInfo(`OTP sent to ${email} from auth route , and result is  ${result.message}`);
+    logInfo(
+      `OTP sent to ${email} from auth route , and result is  ${result.message}`,
+    );
     res.status(200).json(new responseHandler(result));
   } catch (error) {
     next(error);
@@ -50,4 +55,7 @@ authRouter.post(VERIFY_OTP, async (req, res, next) => {
     next(error);
   }
 });
+
+authRouter.get(SIGNUP_GOOGLE, signupWithGoogle);
+authRouter.get(OAUTH_CALLBACK, googleAuthCallback);
 export default authRouter;

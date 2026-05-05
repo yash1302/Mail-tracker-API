@@ -10,6 +10,8 @@ export const authRoutesConstants = {
   LOGIN: "/login",
   SEND_OTP: "/send-otp",
   VERIFY_OTP: "/verify-otp",
+  SIGNUP_GOOGLE: "/googleSignin",
+  OAUTH_CALLBACK: "/oauth/callback",
 };
 
 export const gmailRoutesConstants = {

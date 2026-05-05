@@ -10,10 +10,74 @@ import { authMessages } from "../messages/auth.messages.js";
 import GmailAccount from "../models/gmailAccountsModels.js";
 import { sendOtpService, verifyOtpService } from "../services/auth.services.js";
 import { logError, logInfo } from "../services/logs.services.js";
+import { google } from "googleapis";
+import { getGmailAccountByEmailAndUserIdService } from "../services/gmail.services.js";
 const { USERPRESENT, LOGINFAILURE, UNAUTHORIZED } = authMessages;
 
 const { hashPassword, generateJwtToken, verifyPassword } = utils;
 dotenv.config();
+const oauth2Client = new google.auth.OAuth2(
+  process.env.CLIENT_ID,
+  process.env.CLIENT_SECRET,
+  process.env.GMAIL_SIGNUP_OAUTH_REDIRECT_URI,
+);
+export const signupWithGoogle = async (req, res) => {
+  try {
+    const url = oauth2Client.generateAuthUrl({
+      access_type: "offline",
+      scope: [
+        "https://www.googleapis.com/auth/userinfo.email",
+        "https://www.googleapis.com/auth/userinfo.profile",
+      ],
+    });
+
+    res.redirect(url);
+  } catch (error) {
+    logError(`Google auth error: ${error.message}`);
+    res.status(500).json({ message: "Google authentication failed" });
+  }
+};
+
+export const googleAuthCallback = async (req, res) => {
+  try {
+    const { code } = req.query;
+
+    const { tokens } = await oauth2Client.getToken(code);
+    oauth2Client.setCredentials(tokens);
+
+    const oauth2 = google.oauth2({
+      auth: oauth2Client,
+      version: "v2",
+    });
+
+    const { data } = await oauth2.userinfo.get();
+
+    const { email, name, id: googleId } = data;
+
+    let user = await findUserByEmailService(email);
+
+    if (!user) {
+      user = await createUserService({
+        name,
+        email,
+        password: null,
+        provider: "google",
+        googleId,
+      });
+    }
+
+    const token = await generateJwtToken({
+      id: user.id,
+      email: user.email,
+      name: user.name,
+    });
+
+    res.redirect(`${process.env.FRONTEND_URL}/oauth-success?token=${token}`);
+  } catch (error) {
+    logError(`Google auth error: ${error.message}`);
+    res.status(500).send("Google login failed");
+  }
+};
 
 export const signup = async (name, email, password) => {
   try {
