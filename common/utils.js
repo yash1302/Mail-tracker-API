@@ -81,25 +81,28 @@ export const addTrackingPixel = (html, trackingId) => {
 export const replaceLinksWithTracking = (html, trackingId) => {
   if (!html) return html;
 
-  return html.replace(/<a\s+([^>]*?)href=["'](.*?)["']([^>]*)>/gi, (match, pre, url, post) => {
-    if (
-      !url ||
-      url.startsWith("#") ||
-      url.startsWith("mailto:") ||
-      url.startsWith("tel:")
-    ) {
-      return match;
-    }
+  return html.replace(
+    /<a\s+([^>]*?)href=["'](.*?)["']([^>]*)>/gi,
+    (match, pre, url, post) => {
+      if (
+        !url ||
+        url.startsWith("#") ||
+        url.startsWith("mailto:") ||
+        url.startsWith("tel:")
+      ) {
+        return match;
+      }
 
-    if (url.includes("/t/click/")) {
-      return match;
-    }
+      if (url.includes("/t/click/")) {
+        return match;
+      }
 
-    const encoded = encodeURIComponent(url);
-    const trackedUrl = `${process.env.API_URL}api/gmail/t/click/${trackingId}?url=${encoded}`;
+      const encoded = encodeURIComponent(url);
+      const trackedUrl = `${process.env.API_URL}api/gmail/t/click/${trackingId}?url=${encoded}`;
 
-    return `<a ${pre}href="${trackedUrl}" ${post}>`;
-  });
+      return `<a ${pre}href="${trackedUrl}" ${post}>`;
+    },
+  );
 };
 
 export const stripHtml = (html) => {
@@ -159,7 +162,7 @@ const getResourceType = (mimeType) => {
   return "raw"; // 🔥 pdf, doc, zip, etc.
 };
 
-const uploadFilesToCloudinary = async (files = []) => {
+const uploadFilesToCloudinary = async (files = [], draftId, messageId) => {
   if (!files.length) return [];
 
   return await Promise.all(
@@ -170,6 +173,10 @@ const uploadFilesToCloudinary = async (files = []) => {
           {
             folder: "email_drafts",
             resource_type: resourceType,
+
+            public_id: `${Date.now()}_${file.originalname.replace(/\s+/g, "_")}`,
+
+            overwrite: false,
           },
           (error, result) => {
             if (error) return reject(error);

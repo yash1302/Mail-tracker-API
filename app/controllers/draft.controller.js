@@ -19,7 +19,7 @@ export const createDraftController = async (files, body) => {
 
     const html = body.body || "";
     const text = stripHtml(html);
-    
+
     const result = await createDraftService({
       userId: body.userId,
       gmailAccountId: body.gmailAccountId,
