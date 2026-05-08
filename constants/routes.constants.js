@@ -3,6 +3,7 @@ export const routesConstants = {
   GMAIL: "/api/gmail",
   DRAFT: "/api/draft",
   FOLLOWUP: "/api/followup",
+  AI_REPLY: "/api/ai",
 };
 
 export const authRoutesConstants = {
@@ -43,4 +44,8 @@ export const followUpRoutesConstants = {
   CHECK_REPLIES: "/check-replies",
   UPDATE_FOLLOWUP_STATUS: "/:followUpId/status",
   SEND_FOLLOWUP: "/send-followup",
+};
+
+export const aiRoutesConstants = {
+  GENERATE_REPLY: "/generate-reply",
 };

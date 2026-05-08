@@ -5,6 +5,8 @@ import { v2 as cloudinary } from "cloudinary";
 import { google } from "googleapis";
 import sanitizeHtml from "sanitize-html";
 import axios from "axios";
+import { convert } from "html-to-text";
+import { geminiAI } from "../app/config/gemini.js";
 
 dotenv.config();
 
@@ -128,6 +130,7 @@ export const sanitizeEmailHtml = (html) => {
       "i",
       "strong",
       "em",
+      "u",
       "a",
       "ul",
       "ol",
@@ -231,6 +234,163 @@ export const cleanReplyBody = (html) => {
 export const generateOTP = () => {
   return Math.floor(100000 + Math.random() * 900000).toString();
 };
+
+export const cleanAiEmailBody = (html = "") => {
+  return convert(html, {
+    wordwrap: false,
+    selectors: [
+      {
+        selector: "a",
+        options: {
+          ignoreHref: true,
+        },
+      },
+    ],
+  }).trim();
+};
+
+export const formatConversationForAI = (messages = []) => {
+  return messages
+    .map((msg) => {
+      const sender = msg.direction === "incoming" ? "Client" : "Me";
+      return `
+          ${sender}:
+          Subject: ${msg.subject || ""}
+
+          ${msg.cleanBody || ""}
+        `.trim();
+    })
+    .join("\n-------------------\n");
+};
+
+export const buildAIReplyPrompt = ({
+  tone = "professional",
+  conversation,
+  type = "reply",
+  followupStage = 1,
+}) => {
+  const isFollowup = type === "followup";
+
+  return `
+You are an advanced AI email assistant.
+
+Generate a ${
+    isFollowup ? "follow-up email" : "reply email"
+  } based on the full email thread.
+
+IMPORTANT OUTPUT RULES:
+- Return ONLY clean HTML
+- Do NOT wrap response in markdown
+- Do NOT use \`\`\`html
+- Output must be directly renderable HTML
+- Use professional email formatting
+
+ALLOWED HTML TAGS:
+- <p>
+- <br>
+- <strong>
+- <em>
+- <u>
+- <ul>
+- <ol>
+- <li>
+- <a>
+
+FORMATTING RULES:
+- Use <strong> for important keywords
+- Use bullet points when useful
+- Use clickable links with proper <a> tags
+- Structure email cleanly with paragraphs
+- Add spacing using separate <p> tags
+- Keep formatting modern and professional
+
+GENERAL RULES:
+- Understand complete thread context
+- Continue conversation naturally
+- Avoid repetition
+- Keep response concise
+- Maintain professional tone
+- Do NOT generate subject line
+- Do NOT explain anything
+
+${
+  isFollowup
+    ? `
+FOLLOW-UP RULES:
+- Recipient has not replied yet
+- This is follow-up number ${followupStage}
+- Politely re-engage conversation
+- Sound natural and confident
+- Do not sound desperate
+- Reference previous discussion naturally
+`
+    : `
+REPLY RULES:
+- Respond directly to latest incoming message
+- Answer questions clearly
+- Continue discussion intelligently
+`
+}
+
+TONE:
+${tone}
+
+CONVERSATION:
+${conversation}
+
+EXAMPLE OUTPUT FORMAT:
+
+<p>Hi John,</p>
+
+<p>
+Thank you for your interest in our 
+<strong>AI-powered email tracking platform</strong>.
+</p>
+
+<p>
+Here are the main highlights:
+</p>
+
+<ul>
+  <li><strong>Real-time email tracking</strong></li>
+  <li><strong>AI-generated follow-ups</strong></li>
+  <li><strong>Analytics dashboard</strong></li>
+</ul>
+
+<p>
+You can also review the details here:
+<a href="https://example.com">
+<strong>Product Overview</strong>
+</a>
+</p>
+
+<p>
+Best regards,<br/>
+Yashvardhan Jadhav
+</p>
+`;
+};
+
+export const generateGeminiReply = async ({ prompt, systemInstruction }) => {
+  const response = await geminiAI.models.generateContent({
+    model: "	gemini-3.1-flash-lite",
+
+    contents: prompt,
+
+    config: {
+      temperature: 0.7,
+
+      systemInstruction:
+        systemInstruction ||
+        `
+You are an AI email assistant.
+`,
+    },
+  });
+
+  return response.text?.trim();
+};
+
 export default {
   hashPassword,
   verifyPassword,
