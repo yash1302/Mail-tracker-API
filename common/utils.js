@@ -175,7 +175,12 @@ const uploadFilesToCloudinary = async (files = [], draftId, messageId) => {
         const stream = cloudinary.uploader.upload_stream(
           {
             folder: "email_drafts",
+
             resource_type: resourceType,
+
+            type: "upload",
+
+            access_mode: "public",
 
             public_id: `${Date.now()}_${file.originalname.replace(/\s+/g, "_")}`,
 
