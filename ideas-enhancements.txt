@@ -1,0 +1,47 @@
+- enhance or we can increase generate mail feature by generating a small or medium size context form AI instead of sending every mail as context
+- we can save gmail generated from AI to draft
+- we can fill out own information and give job description or information in an field based on which AI would write mail like the initial mail also
+- add cron job to refresh or fetch replies every night
+- fix followup count on dashboard while sending email user wants to send it 3 times and rn even after sending followup it say followup needed are 2 even afeter sending to 1st followup
+- look properly into followup feature
+- look into feature that can we maintain table for which company we sent mail and what is its analytics. For eg : from single company we sent mails to 4 people then how many of them replied
+- schedule email sending
+- we can show thread understanding based on all the followups and replies i.e 
+Thread Summary:
+Recruiter interested in Node.js role.
+Waiting for availability confirmation.
+- AI Rewrite
+
+Buttons like:
+
+✨ Improve Writing
+✨ Shorten
+✨ Make Friendly
+✨ More Professional
+✨ Fix Grammar
+
+Very useful.
+
+- Smart Tone Controls
+Professional
+Friendly
+Persuasive
+Concise
+Recruiter-style
+Sales-style
+
+- AI Follow-up Generator
+
+Generate:
+
+1st follow-up
+2nd follow-up
+breakup email
+
+based on:
+
+thread history
+opens/clicks
+previous followups
+
+Huge value.
