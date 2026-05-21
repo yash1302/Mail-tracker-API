@@ -1,5 +1,6 @@
 import { google } from "googleapis";
 import { oauth2Client } from "../config/google.js";
+import dayjs from "dayjs";
 import {
   createMessageService,
   createThreadService,
@@ -504,16 +505,60 @@ export const downloadAttachmentController = async (req, res, next) => {
   }
 };
 
-export const getDashboardKPIController = async (userId, gmailAccountId) => {
+export const getDashboardKPIController = async (
+  userId,
+  gmailAccountId,
+  filter = "7d",
+) => {
   try {
     if (!userId || !gmailAccountId) {
       throw new Error("userId and gmailAccountId are required");
     }
 
-    const baseFilter = { userId, gmailAccountId };
-    const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+    // -----------------------------
+    // DATE FILTER
+    // -----------------------------
+    let startDate = null;
 
-    // 🔥 Get replied threads using direction (correct way)
+    switch (filter) {
+      case "today":
+        startDate = dayjs().startOf("day").toDate();
+        break;
+
+      case "7d":
+        startDate = dayjs().subtract(7, "day").toDate();
+        break;
+
+      case "30d":
+        startDate = dayjs().subtract(30, "day").toDate();
+        break;
+
+      case "quarter":
+        startDate = dayjs().subtract(3, "month").toDate();
+        break;
+
+      case "year":
+        startDate = dayjs().subtract(1, "year").toDate();
+        break;
+
+      default:
+        startDate = null;
+    }
+
+    // -----------------------------
+    // BASE FILTER
+    // -----------------------------
+    const baseFilter = {
+      userId,
+      gmailAccountId,
+      ...(startDate && {
+        sentAt: { $gte: startDate },
+      }),
+    };
+
+    const sevenDaysAgo = dayjs().subtract(7, "day").toDate();
+
+    // 🔥 replied threads
     const repliedThreads = await messageModel.distinct("threadId", {
       ...baseFilter,
       direction: "incoming",
@@ -527,53 +572,80 @@ export const getDashboardKPIController = async (userId, gmailAccountId) => {
       oldInitialThreads,
       activeFollowupThreads,
     ] = await Promise.all([
+      // -----------------------------
+      // TOTAL SENT
+      // -----------------------------
       messageModel.countDocuments({
         ...baseFilter,
         type: "initial",
       }),
 
+      // -----------------------------
+      // TOTAL CLICKS
+      // -----------------------------
       messageModel.countDocuments({
         ...baseFilter,
         clicksCount: { $gt: 0 },
       }),
 
-      DraftModel.countDocuments({ userId, gmailAccountId }),
+      // -----------------------------
+      // DRAFTS
+      // -----------------------------
+      DraftModel.countDocuments({
+        userId,
+        gmailAccountId,
+      }),
 
-      // threads where at least 1 follow-up was sent
+      // -----------------------------
+      // FOLLOWED UP THREADS
+      // -----------------------------
       followupModel.distinct("threadId", {
         userId,
         gmailAccountId,
         followUpCount: { $gt: 0 },
+
+        ...(startDate && {
+          createdAt: { $gte: startDate },
+        }),
       }),
 
-      // old threads (older than 7 days)
+      // -----------------------------
+      // OLD THREADS
+      // -----------------------------
       messageModel.distinct("threadId", {
         ...baseFilter,
         type: "initial",
         sentAt: { $lte: sevenDaysAgo },
       }),
 
-      // ✅ only ACTIVE followups (Pending)
+      // -----------------------------
+      // ACTIVE FOLLOWUPS
+      // -----------------------------
       followupModel.distinct("threadId", {
         userId,
         gmailAccountId,
         status: "Pending",
         isActive: true,
+
+        ...(startDate && {
+          createdAt: { $gte: startDate },
+        }),
       }),
     ]);
 
+    // -----------------------------
+    // CALCULATIONS
+    // -----------------------------
     const totalReplied = repliedThreads.length;
     const uniqueFollowedUp = followedUpThreads.length;
 
     const repliedSet = new Set(repliedThreads.map(String));
     const activeFollowupSet = new Set(activeFollowupThreads.map(String));
 
-    // 🔥 Proper unreplied old threads
     const oldUnrepliedThreads = oldInitialThreads.filter(
       (threadId) => !repliedSet.has(threadId.toString()),
     );
 
-    // 🔥 Follow-up needed = old + unreplied + no active follow-up
     const followupNeeded = oldUnrepliedThreads.filter(
       (threadId) => !activeFollowupSet.has(threadId.toString()),
     ).length;
@@ -586,12 +658,13 @@ export const getDashboardKPIController = async (userId, gmailAccountId) => {
 
     const interestedLeads = Math.max(totalClicked - totalReplied, 0);
 
-    // ✅ FIXED (no double subtraction)
-    const noResponse = totalSent - totalReplied;
+    const noResponse = Math.max(totalSent - totalReplied, 0);
 
     return {
       success: true,
       data: {
+        filter,
+
         totalSent,
         totalReplied,
         replyRate,

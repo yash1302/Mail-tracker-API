@@ -113,8 +113,12 @@ gmailRoutes.get(
 
 gmailRoutes.get(DASHBOARD_KPI, authenticateJwtToken, async (req, res, next) => {
   try {
-    const { userId, gmailAccountId } = req.query;
-    const kpiData = await getDashboardKPIController(userId, gmailAccountId);
+    const { userId, gmailAccountId, filter } = req.query;
+    const kpiData = await getDashboardKPIController(
+      userId,
+      gmailAccountId,
+      filter,
+    );
     res.status(200).json(new responseHandler(kpiData));
   } catch (error) {
     next(error);
