@@ -1,24 +1,30 @@
-// cron/checkRepliesCron.js
-
 import dotenv from "dotenv";
 dotenv.config();
 
+import cron from "node-cron";
 import mongoose from "mongoose";
 
 import { checkRepliesController } from "../controllers/followup.controller.js";
 import GmailAccount from "../models/gmailAccountsModels.js";
 
+// =========================
+// MongoDB Connection
+// =========================
 const connectDB = async () => {
   try {
     await mongoose.connect(process.env.MONGODB_URI);
 
     console.log("MongoDB Connected");
   } catch (error) {
-    console.error("MongoDB Connection Error:", error);
+    console.error(" MongoDB Connection Error:", error);
+
     process.exit(1);
   }
 };
 
+// =========================
+// Reply Checker Function
+// =========================
 const runReplyChecker = async () => {
   try {
     console.log("==================================");
@@ -52,7 +58,7 @@ const runReplyChecker = async () => {
           replies: result?.repliesFound || 0,
         });
 
-        // Small delay to avoid Gmail API rate limits
+        // Delay to avoid Gmail API rate limits
         await new Promise((resolve) => setTimeout(resolve, 1000));
       } catch (error) {
         console.error({
@@ -71,17 +77,27 @@ const runReplyChecker = async () => {
       totalChecked,
       totalReplies,
     });
-
-    process.exit(0);
   } catch (error) {
     console.error("Cron Job Failed:", error);
-
-    process.exit(1);
   }
 };
 
-(async () => {
+// =========================
+// Start Cron Scheduler
+// =========================
+const startCronJob = async () => {
   await connectDB();
 
+  console.log("Reply Checker Cron Initialized");
+
+  // Every 5 minutes
+  cron.schedule("0 */4 * * *", async () => {
+    console.log("Running scheduled cron job...");
+
+    await runReplyChecker();
+  });
+
   await runReplyChecker();
-})();
+};
+
+startCronJob();

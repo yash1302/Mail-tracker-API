@@ -1,4 +1,5 @@
 import app from "./app/app.js";
+import "./app/cron/checkReplies.js";
 
 const PORT = process.env.PORT || 5000;
 
