@@ -45,3 +45,14 @@ opens/clicks
 previous followups
 
 Huge value.
+
+personlizing emails for each and every other person
+uploading sheet which contains all the data -
+unsubscribe email i.e dont send follouwps
+show button that person is not interested
+filtering for stats - done
+check if email has been delivered
+open email in case of outlook
+
+
+
