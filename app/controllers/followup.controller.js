@@ -86,21 +86,52 @@ export const checkRepliesController = async (userId, gmailAccountId) => {
           let htmlBody = "";
 
           if (reply.payload.parts) {
-            const htmlPart = reply.payload.parts.find(
-              (p) => p.mimeType === "text/html",
-            );
+            function findHtmlPart(part) {
+              if (!part) return null;
+
+              if (part.mimeType === "text/html") {
+                return part;
+              }
+
+              if (part.parts) {
+                for (const child of part.parts) {
+                  const result = findHtmlPart(child);
+                  if (result) return result;
+                }
+              }
+
+              return null;
+            }
+
+            const htmlPart = findHtmlPart(reply.payload);
 
             if (htmlPart?.body?.data) {
-              htmlBody = Buffer.from(htmlPart.body.data, "base64").toString();
+              const decodeBase64Url = (data) =>
+                Buffer.from(
+                  data.replace(/-/g, "+").replace(/_/g, "/"),
+                  "base64",
+                ).toString("utf8");
+
+              htmlBody = decodeBase64Url(htmlPart.body.data);
             }
           } else if (reply.payload.body?.data) {
-            htmlBody = Buffer.from(
-              reply.payload.body.data,
-              "base64",
-            ).toString();
+            const decodeBase64Url = (data) =>
+              Buffer.from(
+                data.replace(/-/g, "+").replace(/_/g, "/"),
+                "base64",
+              ).toString("utf8");
+
+            htmlBody = decodeBase64Url(htmlPart.body.data);
           }
 
+          console.log("Original HTML Length:", htmlBody.length);
+          console.log(htmlBody.substring(0, 500));
+          console.log(htmlBody.substring(htmlBody.length - 500));
           const cleanedBody = cleanReplyBody(htmlBody);
+
+          console.log("Cleaned HTML Length:", cleanedBody.length);
+          console.log(cleanedBody.substring(0, 500));
+          console.log(cleanedBody.substring(cleanedBody.length - 500));
 
           await messageModel.create({
             userId,

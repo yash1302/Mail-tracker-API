@@ -7,6 +7,7 @@ import sanitizeHtml from "sanitize-html";
 import axios from "axios";
 import { convert } from "html-to-text";
 import { geminiAI } from "../app/config/gemini.js";
+import * as cheerio from "cheerio";
 
 dotenv.config();
 
@@ -217,23 +218,14 @@ const downloadFileFromUrl = async (url) => {
 export const cleanReplyBody = (html) => {
   if (!html) return "";
 
-  // remove quoted gmail content
-  const splitPatterns = [
-    /On\s.+wrote:/i,
-    /From:.+/i,
-    /-----Original Message-----/i,
-  ];
+  const $ = cheerio.load(html);
 
-  let cleaned = html;
+  $(".gmail_quote").remove();
+  $(".gmail_quote_container").remove();
+  $("blockquote.gmail_quote").remove();
+  $("#divRplyFwdMsg").remove();
 
-  for (const pattern of splitPatterns) {
-    const index = cleaned.search(pattern);
-    if (index !== -1) {
-      cleaned = cleaned.slice(0, index);
-    }
-  }
-
-  return cleaned.trim();
+  return $("body").html() || $.html();
 };
 
 export const generateOTP = () => {
@@ -273,106 +265,184 @@ export const buildAIReplyPrompt = ({
   conversation,
   type = "reply",
   followupStage = 1,
+  subject = "",
 }) => {
   const isFollowup = type === "followup";
 
   return `
 You are an advanced AI email assistant.
 
-Generate a ${
-    isFollowup ? "follow-up email" : "reply email"
-  } based on the full email thread.
+Your job is to generate ${
+    isFollowup ? "a follow-up email" : "an email reply"
+  } based on the COMPLETE conversation history.
 
-IMPORTANT OUTPUT RULES:
-- Return ONLY clean HTML
-- Do NOT wrap response in markdown
-- Do NOT use \`\`\`html
-- Output must be directly renderable HTML
-- Use professional email formatting
+==========================================================
+OUTPUT FORMAT (IMPORTANT)
+==========================================================
 
-ALLOWED HTML TAGS:
-- <p>
-- <br>
-- <strong>
-- <em>
-- <u>
-- <ul>
-- <ol>
-- <li>
-- <a>
+Return ONLY valid JSON.
 
-FORMATTING RULES:
-- Use <strong> for important keywords
-- Use bullet points when useful
-- Use clickable links with proper <a> tags
-- Structure email cleanly with paragraphs
-- Add spacing using separate <p> tags
-- Keep formatting modern and professional
+No markdown.
+No explanation.
+No \`\`\`json.
+No extra text.
 
-GENERAL RULES:
-- Understand complete thread context
-- Continue conversation naturally
-- Avoid repetition
-- Keep response concise
-- Maintain professional tone
-- Do NOT generate subject line
-- Do NOT explain anything
+Return EXACTLY in this format:
+
+{
+  "subject": "...",
+  "body": "<p>...</p>"
+}
+
+==========================================================
+SUBJECT RULES
+==========================================================
+
+${
+  subject
+    ? `
+The existing subject is:
+
+"${subject}"
+
+Return this SAME subject.
+Do NOT invent a new one.
+
+Example:
+
+{
+  "subject": "${subject}",
+  "body": "<p>...</p>"
+}
+`
+    : `
+No subject currently exists.
+
+Generate a concise professional subject.
+
+Example:
+
+{
+  "subject": "Backend Developer Opportunity",
+  "body": "<p>...</p>"
+}
+`
+}
+
+==========================================================
+BODY RULES
+==========================================================
+
+Return ONLY clean HTML.
+
+Allowed tags:
+
+<p>
+<br>
+<strong>
+<em>
+<u>
+<ul>
+<ol>
+<li>
+<a>
+
+Do NOT use:
+
+<html>
+<head>
+<body>
+<style>
+table
+div
+span
+markdown
+
+==========================================================
+FORMATTING
+==========================================================
+
+- Use paragraphs.
+- Keep spacing clean.
+- Use <strong> for emphasis.
+- Use bullet points when appropriate.
+- Use proper clickable links.
+- Keep email modern.
+- Sound like a human.
+- Never explain what you're doing.
+
+==========================================================
+GENERAL RULES
+==========================================================
+
+- Understand entire conversation.
+- Respond to latest context.
+- Maintain conversation continuity.
+- Never repeat previous emails.
+- Never hallucinate.
+- Keep concise.
+- Professional language.
+- Natural tone.
 
 ${
   isFollowup
     ? `
-FOLLOW-UP RULES:
-- Recipient has not replied yet
-- This is follow-up number ${followupStage}
-- Politely re-engage conversation
-- Sound natural and confident
-- Do not sound desperate
-- Reference previous discussion naturally
+==========================================================
+FOLLOW-UP RULES
+==========================================================
+
+This is follow-up number ${followupStage}.
+
+Recipient has NOT replied.
+
+Do NOT sound desperate.
+
+Politely remind them.
+
+Reference previous email naturally.
+
+Keep it short.
+
+End with a simple CTA.
 `
     : `
-REPLY RULES:
-- Respond directly to latest incoming message
-- Answer questions clearly
-- Continue discussion intelligently
+==========================================================
+REPLY RULES
+==========================================================
+
+Reply ONLY to the latest incoming message.
+
+Answer every question.
+
+Acknowledge what they said.
+
+If they ask multiple questions,
+answer all of them.
+
+Do not ignore context.
 `
 }
 
-TONE:
+==========================================================
+TONE
+==========================================================
+
 ${tone}
 
-CONVERSATION:
+==========================================================
+CONVERSATION
+==========================================================
+
 ${conversation}
 
-EXAMPLE OUTPUT FORMAT:
+==========================================================
+EXAMPLE OUTPUT
+==========================================================
 
-<p>Hi John,</p>
-
-<p>
-Thank you for your interest in our 
-<strong>AI-powered email tracking platform</strong>.
-</p>
-
-<p>
-Here are the main highlights:
-</p>
-
-<ul>
-  <li><strong>Real-time email tracking</strong></li>
-  <li><strong>AI-generated follow-ups</strong></li>
-  <li><strong>Analytics dashboard</strong></li>
-</ul>
-
-<p>
-You can also review the details here:
-<a href="https://example.com">
-<strong>Product Overview</strong>
-</a>
-</p>
-
-<p>
-Best regards,<br/>
-Yashvardhan Jadhav
-</p>
+{
+  "subject": "${subject || "Backend Developer Opportunity"}",
+  "body": "<p>Hi John,</p><p>Thank you for your email.</p><p>I appreciate your response and would be happy to discuss the opportunity further.</p><p>Looking forward to hearing from you.</p><p>Best regards,<br/>Yashvardhan Jadhav</p>"
+}
 `;
 };
 

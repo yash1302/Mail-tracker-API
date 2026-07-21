@@ -25,6 +25,17 @@ export const generateAIReply = async (
       })
       .lean();
 
+    const existingSubject =
+      messages.find((m) => m.subject)?.subject?.trim() || "";
+
+    let finalSubject = "";
+
+    if (existingSubject) {
+      finalSubject = existingSubject.startsWith("Re:")
+        ? existingSubject
+        : `Re: ${existingSubject}`;
+    }
+
     if (!messages.length) {
       throw new Error("No messages found for the given thread ID");
     }
@@ -46,12 +57,12 @@ export const generateAIReply = async (
       tone,
       conversation,
       type,
+      subject: finalSubject,
     });
 
-    // Gemini response
-    const reply = await generateGeminiReply({
+    const aiResponse = await generateGeminiReply({
       prompt,
-systemInstruction: `
+      systemInstruction: `
 You are an advanced AI email assistant.
 
 Your task is to generate highly contextual
@@ -67,20 +78,28 @@ You must:
 `,
     });
 
+    const cleaned = aiResponse
+      .replace(/```json/g, "")
+      .replace(/```/g, "")
+      .trim();
+
+    const parsed = JSON.parse(cleaned);
+
     return {
       success: true,
       data: {
         threadId,
         tone,
-        reply,
+        subject: parsed.subject || finalSubject,
+        reply: parsed.body,
       },
     };
   } catch (error) {
     console.error("Generate AI Reply Error:", error);
 
-    return res.status(500).json({
+    return {
       success: false,
       message: "Failed to generate AI reply",
-    });
+    };
   }
 };
