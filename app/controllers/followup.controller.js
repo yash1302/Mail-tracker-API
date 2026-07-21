@@ -124,14 +124,7 @@ export const checkRepliesController = async (userId, gmailAccountId) => {
             htmlBody = decodeBase64Url(htmlPart.body.data);
           }
 
-          console.log("Original HTML Length:", htmlBody.length);
-          console.log(htmlBody.substring(0, 500));
-          console.log(htmlBody.substring(htmlBody.length - 500));
           const cleanedBody = cleanReplyBody(htmlBody);
-
-          console.log("Cleaned HTML Length:", cleanedBody.length);
-          console.log(cleanedBody.substring(0, 500));
-          console.log(cleanedBody.substring(cleanedBody.length - 500));
 
           await messageModel.create({
             userId,
