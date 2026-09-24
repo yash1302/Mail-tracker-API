@@ -60,10 +60,20 @@ export const connectGmail = async (req, res) => {
 // this controller handles the OAuth callback, exchanges code for tokens, fetches user email and stores everything in DB
 export const oauthCallback = async (req, res) => {
   try {
+    console.log("========== GMAIL OAUTH CALLBACK ==========");
+
     const code = req.query.code;
     const userId = req.query.state;
 
+    console.log("1. code exists:", !!code);
+    console.log("2. userId:", userId);
+
     const { tokens } = await oauth2Client.getToken(code);
+
+    console.log("3. Google token received");
+    console.log("accessToken exists:", !!tokens.access_token);
+    console.log("refreshToken exists:", !!tokens.refresh_token);
+    console.log("expiry:", tokens.expiry_date);
 
     oauth2Client.setCredentials(tokens);
 
@@ -72,19 +82,26 @@ export const oauthCallback = async (req, res) => {
       auth: oauth2Client,
     });
 
+    console.log("4. Gmail client created");
+
     const profile = await gmail.users.getProfile({
       userId: "me",
     });
 
+    console.log("5. Gmail profile received");
+
     const email = profile.data.emailAddress;
 
-    // 3. Store in DB
+    console.log("6. Gmail email:", email);
+
     const existing = await getGmailAccountByEmailAndUserIdService(
       email,
       userId,
     );
 
-    await insertGmailAccountService({
+    console.log("7. Existing account:", existing);
+
+    const result = await insertGmailAccountService({
       userId,
       email,
       accessToken: tokens.access_token,
@@ -92,10 +109,16 @@ export const oauthCallback = async (req, res) => {
       tokenExpiry: tokens.expiry_date,
     });
 
+    console.log("8. INSERT RESULT:", result);
+
     res.redirect(`${process.env.FRONTEND_URL}/dashboard/`);
   } catch (err) {
-    console.log(err);
-    res.send("OAuth Failed");
+    console.error("========== GMAIL OAUTH FAILED ==========");
+    console.error(err);
+    console.error("message:", err.message);
+    console.error("stack:", err.stack);
+
+    res.status(500).send("OAuth Failed");
   }
 };
 
