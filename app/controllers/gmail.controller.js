@@ -102,8 +102,17 @@ export const oauthCallback = async (req, res) => {
 // controller to fetch all connected Gmail accounts for a user
 export const getGmailAccountsController = async (userId) => {
   try {
+    console.log("GET GMAIL ACCOUNTS");
+    console.log("userId:", userId);
+    console.log("userId type:", typeof userId);
+
     const user = await getUserByIdService(userId);
+
+    console.log("user found:", !!user);
     const gmailAccounts = await getGmailAccountsService(userId);
+
+    console.log("gmail accounts:", gmailAccounts);
+    console.log("gmail account count:", gmailAccounts.length);
     const result = gmailAccounts.map((account) => ({
       _id: account._id,
       userId: account.userId,
