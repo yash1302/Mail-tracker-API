@@ -39,7 +39,7 @@ gmailRoutes.get(GMAIL_ACCOUNT, authenticateJwtToken, async (req, res, next) => {
     res.status(200).json(new responseHandler(result));
   } catch (error) {
     next(error);
-  }x
+  }
 });
 
 gmailRoutes.delete(

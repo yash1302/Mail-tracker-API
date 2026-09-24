@@ -51,6 +51,8 @@ export const connectGmail = async (req, res) => {
       prompt: "consent",
       state: userId,
     });
+
+    console.log("Redirecting to Google OAuth URL:", url);
     res.redirect(url);
   } catch (error) {
     res.status(401).json({ message: "Invalid token" });
