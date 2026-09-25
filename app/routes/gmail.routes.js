@@ -30,16 +30,7 @@ const gmailRoutes = express.Router();
 
 gmailRoutes.get(CONNECT, connectGmail);
 
-gmailRoutes.get(OAUTH2CALLBACK, async (req, res, next) => {
-  try {
-    console.log("🔥 OAUTH CALLBACK ROUTE HIT");
-    console.log("QUERY:", req.query);
-
-    await oauthCallback(req, res);
-  } catch (error) {
-    next(error);
-  }
-});
+gmailRoutes.get(OAUTH2CALLBACK, oauthCallback);
 
 gmailRoutes.get(GMAIL_ACCOUNT, authenticateJwtToken, async (req, res, next) => {
   try {
