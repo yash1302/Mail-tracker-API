@@ -1,5 +1,5 @@
 import { google } from "googleapis";
-import { oauth2Client } from "../config/google.js";
+import { createOAuth2Client } from "../config/google.js";
 import dayjs from "dayjs";
 import {
   createMessageService,
@@ -41,6 +41,9 @@ export const connectGmail = async (req, res) => {
 
     const decoded = await verifyToken(token, process.env.JWT_SECRET);
     const userId = decoded.data.id;
+    const oauth2Client = createOAuth2Client(
+      process.env.GMAIL_OAUTH_REDIRECT_URI,
+    );
     const url = oauth2Client.generateAuthUrl({
       access_type: "offline",
       scope: [
@@ -69,6 +72,10 @@ export const oauthCallback = async (req, res) => {
 
     console.log("1. code exists:", !!code);
     console.log("2. userId:", userId);
+
+    const oauth2Client = createOAuth2Client(
+      process.env.GMAIL_OAUTH_REDIRECT_URI,
+    );
 
     const { tokens } = await oauth2Client.getToken(code);
 
