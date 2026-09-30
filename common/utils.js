@@ -30,7 +30,7 @@ const verifyPassword = async (password, hashedPassword) => {
 };
 
 const generateJwtToken = async (data) => {
-  const options = { expiresIn: "60s" };
+  const options = { expiresIn: "1h" };
   return jsonwebtoken.sign(data, secretKey, options);
 };
 
